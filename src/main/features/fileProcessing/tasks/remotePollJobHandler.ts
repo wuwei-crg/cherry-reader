@@ -42,6 +42,7 @@ export const remotePollJobHandler: JobHandler<FileProcessingJobPayload> = {
 
     let providerTaskId: string
     let remoteContext: FileProcessingRemoteContext
+    let reportedProgress = 0
 
     const persisted = ctx.metadata.remoteState as PersistableRemoteState | undefined
     if (persisted?.providerTaskId) {
@@ -58,7 +59,8 @@ export const remotePollJobHandler: JobHandler<FileProcessingJobPayload> = {
       providerTaskId = start.providerTaskId
       remoteContext = start.remoteContext
       await ctx.patchMetadata({ remoteState: prepared.toPersistable(remoteContext, providerTaskId) })
-      ctx.reportProgress(start.progress, { stage: 'started' })
+      reportedProgress = start.progress
+      ctx.reportProgress(reportedProgress, { stage: 'started' })
     }
 
     while (!ctx.signal.aborted) {
@@ -77,7 +79,10 @@ export const remotePollJobHandler: JobHandler<FileProcessingJobPayload> = {
         return await createFileProcessingJobOutput(ctx, result.output)
       }
 
-      ctx.reportProgress(result.progress, { stage: 'polling' })
+      // Some providers omit their page counters while they move between
+      // processing stages. Keep the last confirmed progress visible.
+      reportedProgress = Math.max(reportedProgress, result.progress)
+      ctx.reportProgress(reportedProgress, { stage: 'polling' })
 
       if (result.remoteContext !== undefined && result.remoteContext !== remoteContext) {
         remoteContext = result.remoteContext

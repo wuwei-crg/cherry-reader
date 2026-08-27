@@ -70,6 +70,37 @@ export async function readMarkdownFromZipFile(zipFilePath: string): Promise<Uint
   }
 }
 
+export async function readMineruArtifactsFromZipFile(
+  zipFilePath: string
+): Promise<{ markdown: Uint8Array; contentList: Uint8Array }> {
+  const zip = new StreamZip.async({ file: zipFilePath })
+  try {
+    const entries = Object.values(await zip.entries())
+    let markdownEntry: StreamZip.ZipEntry | undefined
+    let contentListEntry: StreamZip.ZipEntry | undefined
+    for (const entry of entries) {
+      if (entry.isDirectory) continue
+      const relativePath = normalizeEntryPath(entry.name)
+      const name = relativePath.toLowerCase()
+      if (!markdownEntry && name.endsWith('.md')) markdownEntry = entry
+      if (
+        !contentListEntry &&
+        (name.endsWith('/content_list.json') || name === 'content_list.json' || name.endsWith('_content_list.json'))
+      ) {
+        contentListEntry = entry
+      }
+    }
+    if (!markdownEntry) throw new Error('Result zip does not contain a markdown file')
+    if (!contentListEntry) throw new Error('MinerU result zip does not contain content_list.json')
+    return {
+      markdown: new Uint8Array(await zip.entryData(markdownEntry)),
+      contentList: new Uint8Array(await zip.entryData(contentListEntry))
+    }
+  } finally {
+    await warnIfCleanupFails(() => zip.close(), { zipFilePath, step: 'close-zip' })
+  }
+}
+
 export async function readMarkdownFromResponseZip(options: {
   response: Response
   tempDir: string
@@ -89,6 +120,29 @@ export async function readMarkdownFromResponseZip(options: {
     await pipeline(responseStream, createWriteStream(zipFilePath), { signal: options.signal })
 
     return await readMarkdownFromZipFile(zipFilePath)
+  } finally {
+    await warnIfCleanupFails(() => fs.rm(tempDownloadDir, { recursive: true, force: true }), {
+      tempDownloadDir,
+      zipFilePath,
+      step: 'remove-temp-download'
+    })
+  }
+}
+
+export async function readMineruArtifactsFromResponseZip(options: {
+  response: Response
+  tempDir: string
+  signal?: AbortSignal
+}): Promise<{ markdown: Uint8Array; contentList: Uint8Array }> {
+  await fs.mkdir(options.tempDir, { recursive: true })
+  const tempDownloadDir = await fs.mkdtemp(path.join(options.tempDir, 'file-processing-result-'))
+  const zipFilePath = path.join(tempDownloadDir, 'result.zip')
+  try {
+    if (!options.response.body) throw new Error('Result download response body is empty')
+    await pipeline(Readable.fromWeb(options.response.body as any), createWriteStream(zipFilePath), {
+      signal: options.signal
+    })
+    return await readMineruArtifactsFromZipFile(zipFilePath)
   } finally {
     await warnIfCleanupFails(() => fs.rm(tempDownloadDir, { recursive: true, force: true }), {
       tempDownloadDir,

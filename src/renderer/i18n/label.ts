@@ -171,6 +171,7 @@ const titleKeyMap = {
   'mcp-servers': 'title.mcp-servers',
   notes: 'title.notes',
   paintings: 'title.paintings',
+  reading: 'title.reading',
   settings: 'title.settings',
   translate: 'title.translate',
   agents: 'agent.sidebar_title'
@@ -193,6 +194,7 @@ export const getThemeModeLabelKey = (key: string): string => {
 const sidebarIconKeyMap = {
   assistants: 'title.chat',
   agents: 'title.work',
+  reading: 'title.reading',
   paintings: 'title.paintings',
   translate: 'translate.title',
   mini_app: 'miniApp.title',
@@ -212,6 +214,7 @@ export const getSidebarIconLabelKey = (key: string): string => {
 const sidebarFavoriteKeyMap = {
   assistants: 'assistants.title',
   agents: 'title.work',
+  reading: 'title.reading',
   store: 'assistants.presets.title',
   paintings: 'title.paintings',
   translate: 'translate.title',

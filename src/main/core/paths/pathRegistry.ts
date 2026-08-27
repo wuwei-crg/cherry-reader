@@ -187,6 +187,7 @@ export function buildPathRegistry() {
     'feature.files.data': path.join(appUserDataData, 'Files'),
     'feature.notes.data': path.join(appUserDataData, 'Notes'),
     'feature.knowledgebase.data': path.join(appUserDataData, 'KnowledgeBase'),
+    'feature.reading.data': path.join(appUserDataData, 'Reading'),
 
     // OCR
     'feature.ocr.tesseract': path.join(appUserData, 'tesseract'),

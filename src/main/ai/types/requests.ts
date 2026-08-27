@@ -81,6 +81,8 @@ export interface AiBaseRequest {
   contextOwner?: ContextOwner
   /** Per-request overrides (in-process only; assistant-less callers like the API gateway). */
   callOverrides?: CallOverrides
+  /** Main-owned volatile system context. Never accepted from renderer IPC payloads. */
+  systemPromptAppendix?: string
 }
 
 /**

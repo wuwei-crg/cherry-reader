@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises'
+import path from 'node:path'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -28,7 +29,9 @@ vi.mock('node-stream-zip', () => ({
   }
 }))
 
-const { readMarkdownFromResponseZip, readMarkdownFromZipFile } = await import('../resultPersistence')
+const { readMarkdownFromResponseZip, readMarkdownFromZipFile, readMineruArtifactsFromZipFile } = await import(
+  '../resultPersistence'
+)
 
 describe('fileProcessing result persistence utils', () => {
   beforeEach(() => {
@@ -117,6 +120,20 @@ describe('fileProcessing result persistence utils', () => {
     expect(closeMock).toHaveBeenCalled()
   })
 
+  it('rejects a MinerU archive without content_list.json', async () => {
+    entriesMock.mockResolvedValueOnce({
+      'bundle/output.md': {
+        name: 'bundle/output.md',
+        isDirectory: false
+      }
+    })
+
+    await expect(readMineruArtifactsFromZipFile('/tmp/download/result.zip')).rejects.toThrow(
+      'MinerU result zip does not contain content_list.json'
+    )
+    expect(closeMock).toHaveBeenCalled()
+  })
+
   it('downloads a response zip to temp storage and reads its markdown entry', async () => {
     const mkdirSpy = vi.spyOn(fs, 'mkdir').mockResolvedValue(undefined)
     const mkdtempSpy = vi.spyOn(fs, 'mkdtemp').mockResolvedValue('/tmp/file-processing/file-processing-result-abc')
@@ -137,8 +154,10 @@ describe('fileProcessing result persistence utils', () => {
     ).resolves.toEqual(new Uint8Array(Buffer.from('# output')))
 
     expect(mkdirSpy).toHaveBeenCalledWith('/tmp/file-processing', { recursive: true })
-    expect(mkdtempSpy).toHaveBeenCalledWith('/tmp/file-processing/file-processing-result-')
-    expect(createWriteStreamMock).toHaveBeenCalledWith('/tmp/file-processing/file-processing-result-abc/result.zip')
+    expect(mkdtempSpy).toHaveBeenCalledWith(path.join('/tmp/file-processing', 'file-processing-result-'))
+    expect(createWriteStreamMock).toHaveBeenCalledWith(
+      path.join('/tmp/file-processing/file-processing-result-abc', 'result.zip')
+    )
     expect(pipelineMock).toHaveBeenCalled()
     expect(rmSpy).toHaveBeenCalledWith('/tmp/file-processing/file-processing-result-abc', {
       recursive: true,

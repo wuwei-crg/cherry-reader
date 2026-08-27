@@ -49,10 +49,9 @@ Reviewers will be assigned after you mark the draft pull request as ready for re
 
 ### Contributor Compliance with Project Terms
 
-We require every contributor to certify that they have the right to legally contribute to our project. Contributors express this by consciously signing their commits, thereby indicating their compliance with the [LICENSE](LICENSE).
-A signed commit is one where the commit message includes the following:
+By submitting a contribution, you confirm that you have the right to contribute it under the terms of the [LICENSE](LICENSE). DCO sign-offs and cryptographic commit signatures are welcome but are not required for this fork.
 
-You can generate a signed commit using the following command [git commit --signoff](https://git-scm.com/docs/git-commit#Documentation/git-commit.txt---signoff):
+To add an optional DCO sign-off, use [git commit --signoff](https://git-scm.com/docs/git-commit#Documentation/git-commit.txt---signoff):
 
 ```
 git commit --signoff -m "Your commit message"

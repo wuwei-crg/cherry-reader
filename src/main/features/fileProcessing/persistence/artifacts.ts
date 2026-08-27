@@ -74,6 +74,7 @@ async function createFileProcessingArtifact(
           jobId,
           result: output,
           path: input.output.path,
+          preserveMineruContentList: input.output.preserveMineruContentList,
           signal
         })
       }

@@ -40,6 +40,7 @@ import type { PaintingsSchemas } from './paintings'
 import type { PinSchemas } from './pins'
 import type { PromptSchemas } from './prompts'
 import type { ProviderSchemas } from './providers'
+import type { ReadingSchemas } from './reading'
 import type { SearchSchemas } from './search'
 import type { SkillSchemas } from './skills'
 import type { TagSchemas } from './tags'
@@ -65,6 +66,7 @@ export type ApiSchemas = AssertValidSchemas<
     TemporaryChatSchemas &
     ModelSchemas &
     ProviderSchemas &
+    ReadingSchemas &
     PaintingsSchemas &
     TranslateSchemas &
     FileSchemas &

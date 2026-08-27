@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { mockMainLoggerService } from '../../../../../../tests/__mocks__/MainLoggerService'
 
-const { fetchMock, readMarkdownFromResponseZipMock, atomicWriteFileMock } = vi.hoisted(() => ({
-  fetchMock: vi.fn(),
-  readMarkdownFromResponseZipMock: vi.fn(),
-  atomicWriteFileMock: vi.fn()
-}))
+const { fetchMock, readMarkdownFromResponseZipMock, readMineruArtifactsFromResponseZipMock, atomicWriteFileMock } =
+  vi.hoisted(() => ({
+    fetchMock: vi.fn(),
+    readMarkdownFromResponseZipMock: vi.fn(),
+    readMineruArtifactsFromResponseZipMock: vi.fn(),
+    atomicWriteFileMock: vi.fn()
+  }))
 
 vi.mock('electron', () => ({
   net: {
@@ -16,7 +18,8 @@ vi.mock('electron', () => ({
 }))
 
 vi.mock('../resultPersistence', () => ({
-  readMarkdownFromResponseZip: readMarkdownFromResponseZipMock
+  readMarkdownFromResponseZip: readMarkdownFromResponseZipMock,
+  readMineruArtifactsFromResponseZip: readMineruArtifactsFromResponseZipMock
 }))
 
 vi.mock('@main/utils/file', () => ({
@@ -35,6 +38,10 @@ describe('MarkdownResultStore', () => {
     vi.mocked(application.getPath).mockImplementation((key: string) => `/mock/${key}`)
     atomicWriteFileMock.mockResolvedValue(undefined)
     readMarkdownFromResponseZipMock.mockResolvedValue(new TextEncoder().encode('# zip'))
+    readMineruArtifactsFromResponseZipMock.mockResolvedValue({
+      markdown: new TextEncoder().encode('# book'),
+      contentList: new TextEncoder().encode('[{"text":"Chapter"}]')
+    })
   })
 
   it('writes inline markdown content to the path output target', async () => {
@@ -50,6 +57,29 @@ describe('MarkdownResultStore', () => {
     ).resolves.toBe(OUTPUT_PATH)
 
     expect(atomicWriteFileMock).toHaveBeenCalledWith(OUTPUT_PATH, new TextEncoder().encode('# hello'))
+  })
+
+  it('keeps MinerU content_list.json beside Markdown when requested by a reading import', async () => {
+    await expect(
+      markdownResultStore.persistResultToPath({
+        jobId: 'job-1',
+        path: OUTPUT_PATH,
+        preserveMineruContentList: true,
+        result: { kind: 'response-zip', response: new Response('zip-binary') }
+      })
+    ).resolves.toBe(OUTPUT_PATH)
+
+    expect(readMineruArtifactsFromResponseZipMock).toHaveBeenCalledWith({
+      response: expect.any(Response),
+      tempDir: '/mock/feature.file_processing.temp',
+      signal: undefined
+    })
+    expect(atomicWriteFileMock).toHaveBeenNthCalledWith(1, OUTPUT_PATH, new TextEncoder().encode('# book'))
+    expect(atomicWriteFileMock).toHaveBeenNthCalledWith(
+      2,
+      '/mock/out.md.content_list.json',
+      new TextEncoder().encode('[{"text":"Chapter"}]')
+    )
   })
 
   it('rejects remote zip downloads whose content-type is not application/zip', async () => {

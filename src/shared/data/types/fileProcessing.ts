@@ -26,7 +26,11 @@ export const FileProcessingArtifactSchema = z.discriminatedUnion('kind', [
 export type FileProcessingArtifact = z.infer<typeof FileProcessingArtifactSchema>
 
 export const FileProcessingOutputTargetSchema = z
-  .object({ kind: z.literal('path'), path: AbsoluteFilePathSchema })
+  .object({
+    kind: z.literal('path'),
+    path: AbsoluteFilePathSchema,
+    preserveMineruContentList: z.boolean().optional()
+  })
   .strict()
 export type FileProcessingOutputTarget = z.infer<typeof FileProcessingOutputTargetSchema>
 

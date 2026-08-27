@@ -23,12 +23,22 @@ export interface AssembleSystemPromptInput {
   hasCitableTools?: boolean
   /** Add a volatile local-date anchor when this request can execute web search. */
   webSearchEnabled?: boolean
+  /** Main-owned contextual material that must not be persisted with chat messages. */
+  appendix?: string
   /** Injectable clock for deterministic tests. */
   now?: Date
 }
 
 export async function assembleSystemPrompt(input: AssembleSystemPromptInput): Promise<string | undefined> {
-  const { assistant, model, tools, deferredEntries, hasCitableTools = false, webSearchEnabled = false } = input
+  const {
+    assistant,
+    model,
+    tools,
+    deferredEntries,
+    hasCitableTools = false,
+    webSearchEnabled = false,
+    appendix
+  } = input
 
   const sections: string[] = []
 
@@ -54,6 +64,8 @@ export async function assembleSystemPrompt(input: AssembleSystemPromptInput): Pr
   if (webSearchEnabled) {
     sections.push(buildWebSearchDateContext(input.now ?? new Date()))
   }
+
+  if (appendix) sections.push(appendix)
 
   if (sections.length === 0) return undefined
   return sections.join('\n\n')

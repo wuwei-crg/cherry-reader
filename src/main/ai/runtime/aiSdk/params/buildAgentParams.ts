@@ -293,7 +293,8 @@ export async function buildAgentParams(input: BuildAgentParamsInput): Promise<Bu
     tools,
     deferredEntries,
     hasCitableTools,
-    webSearchEnabled: finalWebToolRoutes.webSearch !== 'none'
+    webSearchEnabled: finalWebToolRoutes.webSearch !== 'none',
+    appendix: request.systemPromptAppendix
   })
   const options = buildAgentOptions(
     scope,

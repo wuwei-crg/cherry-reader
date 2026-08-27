@@ -347,6 +347,35 @@ describe('remotePollJobHandler.execute', () => {
     expect(patchPayloads[1]).toEqual({ remoteState: { providerTaskId: 't', stage: 'exporting', apiHost: 'https://h' } })
   })
 
+  it('does not regress visible progress when a provider temporarily omits its page counters', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    setupCapability()
+    startRemoteMock.mockResolvedValue({
+      providerTaskId: 't',
+      status: 'processing',
+      progress: 0,
+      remoteContext: { apiHost: 'https://h', apiKey: 'k' }
+    })
+    toPersistableMock.mockReturnValue({ providerTaskId: 't', apiHost: 'https://h' })
+    pollRemoteMock
+      .mockResolvedValueOnce({ status: 'processing', progress: 85 })
+      .mockResolvedValueOnce({ status: 'processing', progress: 0 })
+      .mockResolvedValueOnce({
+        status: 'completed',
+        output: { kind: 'remote-zip-url', downloadUrl: 'https://x.zip', configuredApiHost: 'https://h' }
+      })
+    persistResultMock.mockResolvedValue('/tmp/out.md')
+
+    const ctx = createCtx()
+    const execution = remotePollJobHandler.execute(ctx)
+    await vi.advanceTimersByTimeAsync(2_500)
+    await execution
+
+    expect(ctx.reportProgress).toHaveBeenNthCalledWith(1, 0, { stage: 'started' })
+    expect(ctx.reportProgress).toHaveBeenNthCalledWith(2, 85, { stage: 'polling' })
+    expect(ctx.reportProgress).toHaveBeenNthCalledWith(3, 85, { stage: 'polling' })
+  })
+
   it('throws when pollRemote returns failed status before artifacts are persisted', async () => {
     setupCapability()
     startRemoteMock.mockResolvedValue({

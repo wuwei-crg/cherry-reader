@@ -1,5 +1,6 @@
 import type { Tab } from '@renderer/hooks/tab'
 import {
+  BookOpen,
   Code,
   FileSearch,
   Folder,
@@ -23,6 +24,7 @@ export type IconComponent = React.FC<{ size?: number; strokeWidth?: number; clas
 export const ROUTE_ICONS: Record<string, IconComponent> = {
   '/app/chat': MessageCircle,
   '/app/agents': MousePointerClick,
+  '/app/reading': BookOpen,
   '/app/paintings': Palette,
   '/app/translate': Languages,
   '/app/mini-app': LayoutGrid,

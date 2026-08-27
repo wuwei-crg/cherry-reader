@@ -8,6 +8,7 @@
 import { application } from '@application'
 import { ContextPrompts, resolveCompressionOutputTokens, summarizeModelMessages } from '@cherrystudio/ai-core'
 import { assistantDataService } from '@data/services/AssistantService'
+import { readingBookService } from '@data/services/ReadingBookService'
 import { topicService } from '@data/services/TopicService'
 import { loggerService } from '@logger'
 import {
@@ -66,6 +67,30 @@ import type { MainContinueConversationRequest, MainDispatchRequest, MainSteerCon
 import { resolveAssistantModelId, resolveModels, resolvePersistentSiblingsGroupId } from './modelResolution'
 
 const logger = loggerService.withContext('PersistentChatContextProvider')
+const READING_CONTEXT_INPUT_RATIO = 0.7
+
+function buildReadingContext(topicId: string, models: Model[], assistantId: string | undefined): string | undefined {
+  const context = readingBookService.findTopicContext(topicId)
+  if (!context) return undefined
+  const chapters = readingBookService.getSelectedChapters(topicId)
+  if (!chapters.length)
+    throw new Error('The selected reading sections are unavailable. Create a new reading conversation.')
+  const minContextWindow = resolveMinContextWindow(models.map((model) => model.contextWindow))
+  if (minContextWindow !== null) {
+    const inputRoom = resolveInputRoom(minContextWindow, resolveOutputReservation(assistantId, models))
+    if (context.estimatedTokens > Math.floor(inputRoom * READING_CONTEXT_INPUT_RATIO)) {
+      throw new Error(
+        "The selected reading sections exceed this model's context limit. Create a new conversation with a smaller range."
+      )
+    }
+  }
+  const material = chapters
+    .map(
+      (chapter) => `<section index="${chapter.orderIndex}" title="${chapter.title}">\n${chapter.content}\n</section>`
+    )
+    .join('\n\n')
+  return `<reading-material book-id="${context.bookId}" revision="${context.revision}">\n${material}\n</reading-material>`
+}
 
 /**
  * Adapt a turn subscriber into a {@link CompactionSink}.
@@ -312,6 +337,7 @@ export class PersistentChatContextProvider implements ChatContextProvider {
     // 3. Models (single or multi)
     const isRegenerate = req.trigger === 'regenerate-message'
     const models = resolveModels(req.mentionedModelIds, defaultModelId)
+    const readingContext = buildReadingContext(req.topicId, models, assistantId)
     const liveGroupAppendMessageId = isRegenerate && ctx.hasLiveStream ? req.appendToLiveGroupMessageId : undefined
     let liveGroupSourceAnchorMessageId: string | undefined
     const turnOptions: AssistantTurnOptions = {
@@ -487,7 +513,8 @@ export class PersistentChatContextProvider implements ChatContextProvider {
           turnOptions.reasoningEffort,
           turnOptions.serviceTier,
           turnOptions.fastMode === true,
-          retainedContext
+          retainedContext,
+          readingContext
         ),
         rootSpan
       }))
@@ -567,6 +594,7 @@ export class PersistentChatContextProvider implements ChatContextProvider {
         contextSettingsOverride,
         toCompactionSink(subscriber)
       )
+      const readingContext = buildReadingContext(req.topicId, [model], assistantId)
       const request = this.buildStreamRequest(
         req.topicId,
         assistantId,
@@ -577,7 +605,8 @@ export class PersistentChatContextProvider implements ChatContextProvider {
         turnOptions.reasoningEffort,
         turnOptions.serviceTier,
         turnOptions.fastMode === true,
-        retainedContext
+        retainedContext,
+        readingContext
       )
       applyTurnInputAttributes(rootSpan, {
         modelId: model.id,
@@ -713,6 +742,7 @@ export class PersistentChatContextProvider implements ChatContextProvider {
         contextSettingsOverride,
         toCompactionSink(subscriber)
       )
+      const readingContext = buildReadingContext(req.topicId, [model], assistantId)
       return {
         topicId: req.topicId,
         models: [
@@ -729,7 +759,8 @@ export class PersistentChatContextProvider implements ChatContextProvider {
               anchor.data.turnOptions?.reasoningEffort,
               anchor.data.turnOptions?.serviceTier,
               anchor.data.turnOptions?.fastMode === true,
-              retainedContext
+              retainedContext,
+              readingContext
             ),
             rootSpan
           }
@@ -815,6 +846,7 @@ export class PersistentChatContextProvider implements ChatContextProvider {
         toCompactionSink(subscriber)
       )
       const history = withSteerReminder(compactedHistory)
+      const readingContext = buildReadingContext(req.topicId, [model], assistantId)
       return {
         topicId: req.topicId,
         models: [
@@ -830,7 +862,8 @@ export class PersistentChatContextProvider implements ChatContextProvider {
               req.reasoningEffort,
               req.serviceTier,
               req.fastMode,
-              retainedContext
+              retainedContext,
+              readingContext
             ),
             rootSpan
           }
@@ -1087,7 +1120,8 @@ export class PersistentChatContextProvider implements ChatContextProvider {
     reasoningEffort: AiStreamRequest['reasoningEffort'],
     serviceTier: AiStreamRequest['serviceTier'],
     fastMode: boolean,
-    retainedContext?: RetainedContext
+    retainedContext?: RetainedContext,
+    systemPromptAppendix?: string
   ): AiStreamRequest {
     return {
       chatId: topicId,
@@ -1100,6 +1134,7 @@ export class PersistentChatContextProvider implements ChatContextProvider {
       reasoningEffort,
       serviceTier,
       fastMode,
+      ...(systemPromptAppendix ? { systemPromptAppendix } : {}),
       ...(retainedContext ? { retainedContext } : {})
     }
   }

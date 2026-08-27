@@ -602,27 +602,36 @@ export class AssistantDataService {
    * does not restore its previous classification.
    */
   delete(id: string, options: { deleteTopics?: boolean } = {}): { deleted: boolean; deletedTopicIds?: string[] } {
-    let deletedTopicIds: string[] | undefined
-    const deleted = application.get('DbService').withWriteTx((tx) => {
-      const didDelete = this.deleteTx(tx, id)
-      if (!didDelete) return false
-
-      if (options.deleteTopics === true) {
-        deletedTopicIds = topicService.deleteByAssistantIdTx(tx, id, { validateAssistant: false })
-      }
-
-      return true
+    const deletedTopicIds = application.get('DbService').withWriteTx((tx) => {
+      if (options.deleteTopics) return this.deleteWithTopicsTx(tx, id)
+      if (!this.deleteTx(tx, id)) throw DataApiErrorFactory.notFound('Assistant', id)
+      return undefined
     })
+    this.notifyDeleted(id, deletedTopicIds ?? [])
+    return { deleted: true, deletedTopicIds }
+  }
 
-    if (!deleted) {
-      throw DataApiErrorFactory.notFound('Assistant', id)
-    }
-    topicService.notifyReadModelChange(deletedTopicIds ?? [], 'membership')
+  renameTx(tx: DbOrTx, id: string, name: string): void {
+    this.validateName(name)
+    const [row] = tx
+      .update(assistantTable)
+      .set({ name })
+      .where(and(eq(assistantTable.id, id), isNull(assistantTable.deletedAt)))
+      .returning({ id: assistantTable.id })
+      .all()
+    if (!row) throw DataApiErrorFactory.notFound('Assistant', id)
+  }
+
+  deleteWithTopicsTx(tx: DbOrTx, id: string): string[] {
+    if (!this.deleteTx(tx, id)) throw DataApiErrorFactory.notFound('Assistant', id)
+    return topicService.deleteByAssistantIdTx(tx, id, { validateAssistant: false })
+  }
+
+  notifyDeleted(id: string, deletedTopicIds: readonly string[]): void {
+    topicService.notifyReadModelChange(deletedTopicIds, 'membership')
     pinService.notifyPurged()
-
-    logger.info('Soft-deleted assistant', { id, deleteTopics: options.deleteTopics === true })
+    logger.info('Soft-deleted assistant', { id, deleteTopics: deletedTopicIds.length > 0 })
     promptService.notifyTargetBindingsChanged()
-    return { deleted, deletedTopicIds }
   }
 
   deleteTx(tx: DbOrTx, id: string): boolean {
