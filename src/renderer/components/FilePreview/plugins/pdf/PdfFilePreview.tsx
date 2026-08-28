@@ -38,7 +38,6 @@ const PINCH_WHEEL_MAX_EVENT_DELTA = 0.8
 const PINCH_WHEEL_PIXEL_DIVISOR = 10
 const PINCH_WHEEL_IDLE_RESET_MS = 180
 const PINCH_SCALE_SENSITIVITY = 0.075
-const PDF_PAGE_FOREGROUND = 'CanvasText'
 
 type PdfJsViewer = InstanceType<typeof PDFViewer>
 type PdfViewerOptionsWithAbortSignal = ConstructorParameters<typeof PDFViewer>[0] & { abortSignal: AbortSignal }
@@ -88,7 +87,14 @@ function normalizePinchWheelDelta(event: WheelEvent): number {
 }
 
 function detachDocument(viewer: PdfJsViewer): void {
-  ;(viewer.setDocument as (pdfDocument: PDFDocumentProxy | null) => void)(null)
+  try {
+    ;(viewer.setDocument as (pdfDocument: PDFDocumentProxy | null) => void)(null)
+  } catch (error) {
+    // pdf.js can throw while cancelling a canvas render during a rapid resize or unmount.
+    // The viewer is already being disposed, so retain the error for diagnostics without
+    // allowing its cleanup path to take down the surrounding conversation.
+    logger.warn('PDF viewer document detach failed during cleanup', error)
+  }
 }
 
 function destroyLoadingTask(loadingTask: PDFDocumentLoadingTask, filePath: string): void {
@@ -133,6 +139,7 @@ export default function PdfFilePreview({ filePath, fileName, metadata, refreshKe
   const [currentPage, setCurrentPage] = useState(0)
   const [pageCount, setPageCount] = useState(0)
   const [zoom, setZoom] = useState(DEFAULT_ZOOM)
+  const [viewerViewportReady, setViewerViewportReady] = useState(false)
 
   const applyViewerBackground = useCallback((nextBackground: string | null) => {
     const viewer = viewerRef.current
@@ -211,13 +218,6 @@ export default function PdfFilePreview({ filePath, fileName, metadata, refreshKe
   }, [focusContainer])
 
   useEffect(() => {
-    const pdfViewer = pdfViewerRef.current
-    if (pdfViewer) {
-      pdfViewer.pageColors = {
-        ...(background ? { background } : {}),
-        foreground: PDF_PAGE_FOREGROUND
-      }
-    }
     applyViewerBackground(background)
   }, [applyViewerBackground, background])
 
@@ -230,6 +230,34 @@ export default function PdfFilePreview({ filePath, fileName, metadata, refreshKe
 
     return () => observer?.disconnect()
   }, [updateBackground])
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    // PDF.js computes page canvases from the scroll container. A panel that is
+    // still being laid out reports 0x0 here; constructing the viewer at that
+    // point can make its render-cancellation path throw in pdf.js.
+    const updateViewportReady = (entries?: ResizeObserverEntry[]) => {
+      const rect = entries?.[0]?.contentRect ?? container.getBoundingClientRect()
+      if (rect.width > 0 && rect.height > 0) {
+        // Once initialized, retain the viewer while a splitter is being dragged.
+        setViewerViewportReady(true)
+      }
+    }
+
+    updateViewportReady()
+    if (typeof ResizeObserver === 'undefined') {
+      // Test and older browser environments cannot report layout changes. Keep
+      // the established behavior there while Electron uses the guarded path.
+      setViewerViewportReady(true)
+      return
+    }
+
+    const observer = new ResizeObserver(updateViewportReady)
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -304,7 +332,7 @@ export default function PdfFilePreview({ filePath, fileName, metadata, refreshKe
   useEffect(() => {
     const container = containerRef.current
     const viewerElement = viewerRef.current
-    if (!documentProxy || !container || !viewerElement) return
+    if (!documentProxy || !viewerViewportReady || !container || !viewerElement) return
 
     const eventBus = new EventBus()
     const linkService = new PDFLinkService({ eventBus })
@@ -319,10 +347,6 @@ export default function PdfFilePreview({ filePath, fileName, metadata, refreshKe
         linkService,
         abortSignal: viewerAbortController.signal,
         annotationMode: AnnotationMode.ENABLE,
-        pageColors: {
-          ...(backgroundRef.current ? { background: backgroundRef.current } : {}),
-          foreground: PDF_PAGE_FOREGROUND
-        },
         supportsPinchToZoom: true
       }
       pdfViewer = new PDFViewer(viewerOptions)
@@ -477,12 +501,16 @@ export default function PdfFilePreview({ filePath, fileName, metadata, refreshKe
       container.removeEventListener('pointerdown', focusContainer)
       clearPinchWheelTimers()
       detachDocument(pdfViewer)
-      pdfViewer.cleanup()
+      try {
+        pdfViewer.cleanup()
+      } catch (error) {
+        logger.warn('PDF viewer cleanup failed', error)
+      }
       if (pdfViewerRef.current === pdfViewer) {
         pdfViewerRef.current = null
       }
     }
-  }, [applyViewerBackground, documentProxy, filePath, focusContainer])
+  }, [applyViewerBackground, documentProxy, filePath, focusContainer, viewerViewportReady])
 
   const hasPages = status === 'ready' && pageCount > 0
 

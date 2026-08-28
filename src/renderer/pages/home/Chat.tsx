@@ -54,6 +54,8 @@ interface Props {
   /** The entry topic is still resolving — hold the loading center instead of the empty one. */
   topicPending?: boolean
   centerSurface?: ConversationCenterSlot | null
+  /** Composes feature-specific content beside the conversation while preserving the shared shell. */
+  centerContentWrapper?: (content: ReactNode) => ReactNode
   pane?: ReactNode
   paneOpen?: boolean
   panePosition?: ChatPanePosition
@@ -224,7 +226,9 @@ const Chat: FC<Props> = (props) => {
       <ConversationCenterState state={props.topicPending ? 'loading' : 'empty'} />
     ))
   // ChatContent is keyed by topic; keep width-derived layout state outside that remount boundary.
-  const center = <ChatLayoutModeProvider>{centerContent}</ChatLayoutModeProvider>
+  const center = (
+    <ChatLayoutModeProvider>{props.centerContentWrapper?.(centerContent) ?? centerContent}</ChatLayoutModeProvider>
+  )
 
   return (
     <ConversationShell

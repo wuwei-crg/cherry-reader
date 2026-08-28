@@ -4,7 +4,8 @@ import { readingBookTable, readingChapterTable, readingTopicContextTable } from 
 import { topicTable } from '@data/db/schemas/topic'
 import type { DbOrTx } from '@data/db/types'
 import { DataApiErrorFactory } from '@shared/data/api/errors'
-import type { ReadingBook, ReadingChapter, ReadingTopicContext } from '@shared/data/types/reading'
+import type { ReadingBook, ReadingChapter, ReadingTopicContext, ReadingTopicSource } from '@shared/data/types/reading'
+import { AbsoluteFilePathSchema } from '@shared/types/file'
 import { and, asc, desc, eq, gte, isNull, lte } from 'drizzle-orm'
 
 import { nullsToUndefined, timestampToISO } from './utils/rowMappers'
@@ -12,10 +13,11 @@ import { nullsToUndefined, timestampToISO } from './utils/rowMappers'
 export type ReadingChapterInput = Omit<ReadingChapter, 'id' | 'bookId' | 'revision' | 'createdAt' | 'updatedAt'>
 
 function toBook(row: typeof readingBookTable.$inferSelect): ReadingBook {
+  const { sourcePath: _, ...book } = row
   return {
-    ...nullsToUndefined(row),
-    createdAt: timestampToISO(row.createdAt),
-    updatedAt: timestampToISO(row.updatedAt)
+    ...nullsToUndefined(book),
+    createdAt: timestampToISO(book.createdAt),
+    updatedAt: timestampToISO(book.updatedAt)
   }
 }
 
@@ -108,6 +110,24 @@ export class ReadingBookService {
       .limit(1)
       .all()
     return row ? toTopicContext(row) : undefined
+  }
+
+  findTopicSource(topicId: string): ReadingTopicSource | undefined {
+    const [row] = application
+      .get('DbService')
+      .getDb()
+      .select({
+        bookId: readingBookTable.id,
+        sourcePath: readingBookTable.sourcePath,
+        title: readingBookTable.title,
+        topicId: readingTopicContextTable.topicId
+      })
+      .from(readingTopicContextTable)
+      .innerJoin(readingBookTable, eq(readingTopicContextTable.bookId, readingBookTable.id))
+      .where(eq(readingTopicContextTable.topicId, topicId))
+      .limit(1)
+      .all()
+    return row ? { ...row, sourcePath: AbsoluteFilePathSchema.parse(row.sourcePath) } : undefined
   }
 
   getSelectedChapters(topicId: string): ReadingChapter[] {

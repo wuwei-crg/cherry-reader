@@ -70,6 +70,7 @@ export class ReadingService extends BaseService {
   renameBook(input: { bookId: string; title: string }): { title: string } {
     const book = application.get('DbService').withWriteTx((tx) => {
       const current = readingBookService.getByIdTx(tx, input.bookId)
+      assistantDataService.restoreDeletedTx(tx, current.assistantId)
       assistantDataService.renameTx(tx, current.assistantId, input.title)
       return readingBookService.renameTx(tx, current.id, input.title)
     })
@@ -85,7 +86,11 @@ export class ReadingService extends BaseService {
 
     const { book, deletedTopicIds } = application.get('DbService').withWriteTx((tx) => {
       const book = readingBookService.deleteTx(tx, input.bookId)
-      const deletedTopicIds = assistantDataService.deleteWithTopicsTx(tx, book.assistantId)
+      // Older versions allowed the linked assistant to be soft-deleted from
+      // the general assistant library. Clean up its topics and book even when
+      // the assistant row is already soft-deleted.
+      const deletedTopicIds = topicService.deleteByAssistantIdTx(tx, book.assistantId, { validateAssistant: false })
+      assistantDataService.deleteTx(tx, book.assistantId, { allowReadingOwner: true })
       return { book, deletedTopicIds }
     })
     readingBookService.notifyBookChange(book.id)
@@ -120,6 +125,11 @@ export class ReadingService extends BaseService {
     if (estimatedTokens > MAX_SELECTED_CONTEXT_TOKENS) {
       throw new Error(`The selected chapters contain about ${estimatedTokens} tokens. Please select a smaller range.`)
     }
+    // A book may predate the isolation of reading assistants and have a
+    // soft-deleted assistant. Restore that owner before creating a topic.
+    application.get('DbService').withWriteTx((tx) => {
+      assistantDataService.restoreDeletedTx(tx, book.assistantId)
+    })
     const topic = topicService.create({ assistantId: book.assistantId })
     application.get('DbService').withWriteTx((tx) =>
       readingBookService.createTopicContextTx(tx, {

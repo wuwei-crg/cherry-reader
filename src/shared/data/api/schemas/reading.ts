@@ -1,4 +1,5 @@
-import type { ReadingBook, ReadingChapter, ReadingTopicContext } from '@shared/data/types/reading'
+import type { ReadingBook, ReadingChapter, ReadingTopicContext, ReadingTopicSource } from '@shared/data/types/reading'
+import { AbsoluteFilePathSchema } from '@shared/types/file'
 import * as z from 'zod'
 
 export const ReadingBookStatusSchema = z.enum(['pending', 'processing', 'ready', 'failed'])
@@ -42,6 +43,13 @@ export const ReadingTopicContextSchema = z.strictObject({
   updatedAt: z.string()
 }) satisfies z.ZodType<ReadingTopicContext>
 
+export const ReadingTopicSourceSchema = z.strictObject({
+  bookId: z.string(),
+  sourcePath: AbsoluteFilePathSchema,
+  title: z.string(),
+  topicId: z.string()
+}) satisfies z.ZodType<ReadingTopicSource>
+
 export type ReadingSchemas = {
   '/reading-books': {
     GET: { response: ReadingBook[] }
@@ -54,5 +62,8 @@ export type ReadingSchemas = {
   }
   '/reading-topics/:topicId/context': {
     GET: { params: { topicId: string }; response: ReadingTopicContext }
+  }
+  '/reading-topics/:topicId/source': {
+    GET: { params: { topicId: string }; response: ReadingTopicSource | null }
   }
 }

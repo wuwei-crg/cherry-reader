@@ -20,6 +20,7 @@ import {
 import HistoryRecordsView from '@renderer/components/history/HistoryRecordsView'
 import { ConversationResourceView } from '@renderer/components/resourceCatalog/conversation'
 import { usePersistCache } from '@renderer/data/hooks/useCache'
+import { useQuery } from '@renderer/data/hooks/useDataApi'
 import { useCommandHandler } from '@renderer/hooks/command'
 import { useAssistantTopicsSource } from '@renderer/hooks/resourceViewSources'
 import { useCurrentTabId, useIsActiveTab, useTabSelfVisuals } from '@renderer/hooks/tab'
@@ -32,6 +33,7 @@ import { useConversationLocateRequest } from '@renderer/hooks/useConversationLoc
 import { useConversationShellPaneState } from '@renderer/hooks/useConversationShellPaneState'
 import { useModelById } from '@renderer/hooks/useModel'
 import { mapApiTopicToRendererTopic, useActiveTopic, useTopicById, useTopicMutations } from '@renderer/hooks/useTopic'
+import { ReadingConversationLayout } from '@renderer/pages/home/components/ReadingConversationLayout'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import type { ResourceListRevealPayload } from '@renderer/services/resourceListRevealEvents'
 import { toast } from '@renderer/services/toast'
@@ -241,6 +243,10 @@ const HomePage: FC = () => {
       (isActiveTopicLoading && lastVisibleTopicRef.current?.id === activeTopicId
         ? lastVisibleTopicRef.current
         : undefined))
+  const { data: readingTopicSource } = useQuery('/reading-topics/:topicId/source', {
+    params: { topicId: visibleTopic?.id ?? '' },
+    enabled: Boolean(visibleTopic?.id)
+  })
   const requestComposerFocus = useComposerFocusRequest(visibleTopic?.id)
   const resourceConversationKey = useMemo(() => {
     if (visibleTopic?.id) return `topic:${visibleTopic.id}`
@@ -765,6 +771,38 @@ const HomePage: FC = () => {
   ) : null
 
   const centerSurface = historyRecordsCenter ?? resourceCenter
+  const readingConversationSource =
+    !isMessageOnlyView && !centerSurface && readingTopicSource?.topicId === visibleTopic?.id
+      ? readingTopicSource
+      : undefined
+  const chat = (
+    <Chat
+      activeTopic={visibleTopic}
+      topicPending={isActiveTopicLoading || isRouteTopicLoading}
+      centerSurface={centerSurface}
+      centerContentWrapper={
+        readingConversationSource
+          ? (content) => (
+              <ReadingConversationLayout source={readingConversationSource}>{content}</ReadingConversationLayout>
+            )
+          : undefined
+      }
+      pane={pane}
+      paneOpen={shellPaneOpen}
+      panePosition="left"
+      onPaneCollapse={() => setShellPaneOpenManually(false)}
+      onPaneAutoCollapseChange={handlePaneAutoCollapseChange}
+      paneManualToggle={paneManualToggle}
+      onNewTopic={isMessageOnlyView ? undefined : handleCreateEmptyTopic}
+      onCreateEmptyTopic={isMessageOnlyView ? undefined : handleCreateEmptyTopic}
+      showResourceListControls={!isMessageOnlyView}
+      sidebarOpen={shellPaneOpen}
+      onSidebarToggle={toggleShellPane}
+      locateMessageId={locateMessageId}
+      onLocateMessageHandled={handleLocateMessageHandled}
+      resourcePaneCount={topicResourcePaneCount}
+    />
+  )
 
   // The provider, conversation shell, and viewport stay at one React ownership path while the center
   // switches between loading, chat, history, and resource surfaces. Capability identity alone now
@@ -781,27 +819,7 @@ const HomePage: FC = () => {
       userOpenIntentSeq={topicPaneUserOpenIntentSeq}
       revealRequest={topicRevealRequest}>
       <Container id="home-page">
-        <ContentContainer $detached={isWindowFrame}>
-          <Chat
-            activeTopic={visibleTopic}
-            topicPending={isActiveTopicLoading || isRouteTopicLoading}
-            centerSurface={centerSurface}
-            pane={pane}
-            paneOpen={shellPaneOpen}
-            panePosition="left"
-            onPaneCollapse={() => setShellPaneOpenManually(false)}
-            onPaneAutoCollapseChange={handlePaneAutoCollapseChange}
-            paneManualToggle={paneManualToggle}
-            onNewTopic={isMessageOnlyView ? undefined : handleCreateEmptyTopic}
-            onCreateEmptyTopic={isMessageOnlyView ? undefined : handleCreateEmptyTopic}
-            showResourceListControls={!isMessageOnlyView}
-            sidebarOpen={shellPaneOpen}
-            onSidebarToggle={toggleShellPane}
-            locateMessageId={locateMessageId}
-            onLocateMessageHandled={handleLocateMessageHandled}
-            resourcePaneCount={topicResourcePaneCount}
-          />
-        </ContentContainer>
+        <ContentContainer $detached={isWindowFrame}>{chat}</ContentContainer>
         {assistantPickerDialog}
       </Container>
     </TopicRightPane.Scope>

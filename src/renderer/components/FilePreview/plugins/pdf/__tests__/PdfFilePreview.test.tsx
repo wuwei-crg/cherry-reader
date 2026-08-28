@@ -37,7 +37,7 @@ const mocks = vi.hoisted(() => ({
   }>,
   safeOpen: vi.fn(),
   toastError: vi.fn(),
-  viewerInstances: [] as Array<{ pageColors: { background?: string; foreground: string } }>
+  viewerInstances: [] as unknown[]
 }))
 
 vi.mock('pdfjs-dist', () => ({
@@ -115,7 +115,6 @@ vi.mock('pdfjs-dist/web/pdf_viewer.mjs', () => {
   class MockPDFViewer {
     cleanup = mocks.pdfViewerCleanup
     firstPagePromise = Promise.resolve()
-    pageColors: { background?: string; foreground: string }
     setDocument = mocks.pdfViewerSetDocument
     private currentPage = 1
     private scale = 1
@@ -123,10 +122,9 @@ vi.mock('pdfjs-dist/web/pdf_viewer.mjs', () => {
     constructor(
       private options: {
         eventBus: MockEventBus
-        pageColors: { background?: string; foreground: string }
+        pageColors?: unknown
       }
     ) {
-      this.pageColors = options.pageColors
       mocks.pdfViewerConstructor(options)
       mocks.viewerInstances.push(this)
     }
@@ -228,6 +226,7 @@ vi.mock('@renderer/services/toast', () => ({
 const filePath = '/tmp/workspace/paper.pdf' as AbsoluteFilePath
 let initialDataTheme: string | null
 let themeBackground: string
+const originalResizeObserver = globalThis.ResizeObserver
 
 function renderPreview(refreshKey = 0, size = 1024) {
   return render(<PdfFilePreview filePath={filePath} fileName="paper.pdf" metadata={{ size }} refreshKey={refreshKey} />)
@@ -262,11 +261,26 @@ describe('PdfFilePreview', () => {
       destroy: mocks.loadingTaskDestroy,
       promise: Promise.resolve(mocks.pdfDocument)
     })
+    globalThis.ResizeObserver = class {
+      constructor(private readonly callback: ResizeObserverCallback) {}
+
+      disconnect() {}
+
+      observe(target: Element) {
+        this.callback(
+          [{ contentRect: DOMRect.fromRect({ height: 800, width: 600 }), target } as ResizeObserverEntry],
+          this as unknown as ResizeObserver
+        )
+      }
+
+      unobserve() {}
+    } as unknown as typeof ResizeObserver
   })
 
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
+    globalThis.ResizeObserver = originalResizeObserver
     if (initialDataTheme === null) {
       document.documentElement.removeAttribute('data-theme')
     } else {
@@ -296,7 +310,6 @@ describe('PdfFilePreview', () => {
       expect.objectContaining({
         annotationMode: 1,
         abortSignal: expect.any(AbortSignal),
-        pageColors: { background: 'rgb(10, 11, 12)', foreground: 'CanvasText' },
         supportsPinchToZoom: true
       })
     )
@@ -338,7 +351,7 @@ describe('PdfFilePreview', () => {
     })
   })
 
-  it('updates PDF page colors when the app theme changes without rebuilding the viewer', async () => {
+  it('uses CSS page backgrounds without enabling PDF.js canvas color filters', async () => {
     renderPreview()
     await waitFor(() => expect(mocks.viewerInstances).toHaveLength(1))
 
@@ -348,13 +361,10 @@ describe('PdfFilePreview', () => {
       initialDataTheme === 'pdf-test-theme' ? 'pdf-test-theme-updated' : 'pdf-test-theme'
     )
 
-    await waitFor(() =>
-      expect(mocks.viewerInstances[0].pageColors).toEqual({
-        background: 'rgb(30, 31, 32)',
-        foreground: 'CanvasText'
-      })
+    await waitFor(() => expect(mocks.pdfViewerConstructor).toHaveBeenCalledTimes(1))
+    expect(mocks.pdfViewerConstructor).toHaveBeenCalledWith(
+      expect.not.objectContaining({ pageColors: expect.anything() })
     )
-    expect(mocks.pdfViewerConstructor).toHaveBeenCalledTimes(1)
   })
 
   it('shows a localized generic error without exposing parser details', async () => {

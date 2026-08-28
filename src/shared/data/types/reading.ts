@@ -1,3 +1,5 @@
+import type { AbsoluteFilePath } from '@shared/types/file'
+
 export type ReadingBookStatus = 'pending' | 'processing' | 'ready' | 'failed'
 
 export interface ReadingChapter {
@@ -37,4 +39,11 @@ export interface ReadingTopicContext {
   estimatedTokens: number
   createdAt: string
   updatedAt: string
+}
+
+export interface ReadingTopicSource {
+  bookId: string
+  sourcePath: AbsoluteFilePath
+  title: string
+  topicId: string
 }

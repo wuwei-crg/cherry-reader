@@ -54,6 +54,7 @@ vi.mock('@renderer/components/chat/shell/ConversationShell', () => ({
     return (
       <div data-testid="conversation-shell">
         <div data-testid="conversation-top-bar">{props.topBar}</div>
+        {props.pane}
         {props.topRightTool}
         {props.center}
         {props.centerOverlay}
@@ -268,6 +269,19 @@ describe('Chat', () => {
     expect(screen.getByTestId('chat-navbar')).toHaveAttribute('data-show-sidebar-controls', 'false')
     expect(conversationShellProps.current?.topBar).toBeTruthy()
     expect(conversationShellProps.current?.topRightTool).toBeTruthy()
+  })
+
+  it('keeps the conversation list while wrapping only the chat center', () => {
+    render(
+      <Chat
+        activeTopic={topic}
+        pane={<aside>Conversations</aside>}
+        centerContentWrapper={(content) => <div data-testid="reading-center">{content}</div>}
+      />
+    )
+
+    expect(screen.getByText('Conversations')).toBeInTheDocument()
+    expect(screen.getByTestId('reading-center')).toContainElement(screen.getByTestId('chat-content'))
   })
 
   it('keeps the composer context available while the assistant and model are resolving', () => {

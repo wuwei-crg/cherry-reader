@@ -47,6 +47,13 @@ describe('ReadingBookService', () => {
     )
 
     expect(readingBookService.getSelectedChapters('topic-1').map((chapter) => chapter.title)).toEqual(['One', 'Two'])
+    expect(readingBookService.findTopicSource('topic-1')).toEqual({
+      bookId: book.id,
+      sourcePath: 'C:/books/book.pdf',
+      title: 'Book',
+      topicId: 'topic-1'
+    })
+    expect(readingBookService.findTopicSource('ordinary-topic')).toBeUndefined()
   })
 
   it('renames and deletes a book with its parsed chapters and reading contexts', () => {

@@ -10,6 +10,7 @@ import { application } from '@application'
 import { assistantTable } from '@data/db/schemas/assistant'
 import { assistantKnowledgeBaseTable, assistantMcpServerTable } from '@data/db/schemas/assistantRelations'
 import { pinTable } from '@data/db/schemas/pin'
+import { readingBookTable } from '@data/db/schemas/reading'
 import type { DbOrTx, DbType } from '@data/db/types'
 import { loggerService } from '@logger'
 import { DataApiError, DataApiErrorFactory, ErrorCode } from '@shared/data/api/errors'
@@ -213,12 +214,38 @@ export class AssistantDataService {
     if (!options?.includeDeleted) {
       conditions.push(isNull(assistantTable.deletedAt))
     }
-    const [row] = this.db
+    let [row] = this.db
       .select()
       .from(assistantTable)
       .where(and(...conditions))
       .limit(1)
       .all()
+
+    // Reading assistants are owned by the book lifecycle. Older builds let
+    // them be soft-deleted from the general assistant UI, which stranded their
+    // existing topics. Restore only when the assistant is still referenced by
+    // a reading book, leaving ordinary assistant deletion semantics unchanged.
+    if (!row && !options?.includeDeleted) {
+      const [readingOwner] = this.db
+        .select({ assistantId: readingBookTable.assistantId })
+        .from(readingBookTable)
+        .where(eq(readingBookTable.assistantId, id))
+        .limit(1)
+        .all()
+      if (readingOwner) {
+        this.db
+          .update(assistantTable)
+          .set({ deletedAt: null, updatedAt: Date.now() })
+          .where(and(eq(assistantTable.id, id), sql`${assistantTable.deletedAt} IS NOT NULL`))
+          .run()
+        ;[row] = this.db
+          .select()
+          .from(assistantTable)
+          .where(and(eq(assistantTable.id, id), isNull(assistantTable.deletedAt)))
+          .limit(1)
+          .all()
+      }
+    }
     if (!row) {
       throw DataApiErrorFactory.notFound('Assistant', id)
     }
@@ -634,7 +661,22 @@ export class AssistantDataService {
     promptService.notifyTargetBindingsChanged()
   }
 
-  deleteTx(tx: DbOrTx, id: string): boolean {
+  deleteTx(tx: DbOrTx, id: string, options: { allowReadingOwner?: boolean } = {}): boolean {
+    if (!options.allowReadingOwner) {
+      const [readingOwner] = tx
+        .select({ id: readingBookTable.id })
+        .from(readingBookTable)
+        .where(eq(readingBookTable.assistantId, id))
+        .limit(1)
+        .all()
+      if (readingOwner) {
+        throw DataApiErrorFactory.conflict(
+          'This assistant is owned by a reading book. Delete the book from the Reading Assistant page.',
+          'assistant'
+        )
+      }
+    }
+
     const [row] = tx
       .update(assistantTable)
       .set({ deletedAt: Date.now(), groupId: null })
@@ -648,6 +690,18 @@ export class AssistantDataService {
     promptService.purgeForTargetTx(tx, 'assistant', id)
 
     return true
+  }
+
+  /** Restore a soft-deleted assistant owned by a feature such as Reading. */
+  restoreDeletedTx(tx: DbOrTx, id: string): boolean {
+    const [row] = tx
+      .update(assistantTable)
+      .set({ deletedAt: null, updatedAt: Date.now() })
+      .where(and(eq(assistantTable.id, id), sql`${assistantTable.deletedAt} IS NOT NULL`))
+      .returning({ id: assistantTable.id })
+      .all()
+
+    return Boolean(row)
   }
 
   /**
