@@ -2,6 +2,7 @@ import '@renderer/assets/styles/vendor/pdf-viewer.css'
 
 import { EmptyState } from '@cherrystudio/ui'
 import { loggerService } from '@logger'
+import SelectionContextMenu from '@renderer/components/SelectionContextMenu'
 import { toast } from '@renderer/services/toast'
 import { safeOpen } from '@renderer/utils/file/safeOpen'
 import type { AbsoluteFilePath } from '@shared/types/file'
@@ -527,43 +528,45 @@ export default function PdfFilePreview({ filePath, fileName, metadata, refreshKe
         onResetZoom={resetZoom}
       />
       <FilePreviewLayout.Content>
-        <div
-          ref={rootRef}
-          data-testid="pdf-file-preview"
-          className="relative h-full min-h-0 w-full overflow-hidden bg-background">
-          {status === 'error' ? (
-            <div role="alert" className="h-full">
-              <EmptyState
-                icon={AlertCircle}
-                title={t('file_preview.load_error.title')}
-                description={t('file_preview.load_error.description')}
-                className="h-full"
-              />
-            </div>
-          ) : status === 'too_large' ? (
-            <PdfPreviewTooLarge filePath={filePath} />
-          ) : (
-            <>
-              <div
-                ref={containerRef}
-                data-testid="pdfjs-viewer-container"
-                role="region"
-                aria-label={fileName}
-                className="absolute inset-0 overflow-auto bg-background outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
-                tabIndex={0}>
-                <div ref={viewerRef} data-testid="pdfjs-viewer" className="pdfViewer" />
+        <SelectionContextMenu>
+          <div
+            ref={rootRef}
+            data-testid="pdf-file-preview"
+            className="relative h-full min-h-0 w-full overflow-hidden bg-background">
+            {status === 'error' ? (
+              <div role="alert" className="h-full">
+                <EmptyState
+                  icon={AlertCircle}
+                  title={t('file_preview.load_error.title')}
+                  description={t('file_preview.load_error.description')}
+                  className="h-full"
+                />
               </div>
-              {status === 'loading' ? (
+            ) : status === 'too_large' ? (
+              <PdfPreviewTooLarge filePath={filePath} />
+            ) : (
+              <>
                 <div
-                  role="status"
-                  className="absolute inset-0 flex items-center justify-center gap-2 bg-background text-muted-foreground text-sm">
-                  <LoaderCircle className="size-4 animate-spin" aria-hidden />
-                  <span>{t('file_preview.loading')}</span>
+                  ref={containerRef}
+                  data-testid="pdfjs-viewer-container"
+                  role="region"
+                  aria-label={fileName}
+                  className="absolute inset-0 select-text overflow-auto bg-background outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
+                  tabIndex={0}>
+                  <div ref={viewerRef} data-testid="pdfjs-viewer" className="pdfViewer select-text" />
                 </div>
-              ) : null}
-            </>
-          )}
-        </div>
+                {status === 'loading' ? (
+                  <div
+                    role="status"
+                    className="absolute inset-0 flex items-center justify-center gap-2 bg-background text-muted-foreground text-sm">
+                    <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                    <span>{t('file_preview.loading')}</span>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </div>
+        </SelectionContextMenu>
       </FilePreviewLayout.Content>
     </FilePreviewLayout.Frame>
   )

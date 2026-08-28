@@ -223,6 +223,10 @@ vi.mock('@renderer/services/toast', () => ({
   toast: { error: mocks.toastError }
 }))
 
+vi.mock('@renderer/components/SelectionContextMenu', () => ({
+  default: ({ children }: PropsWithChildren) => <div data-testid="pdf-selection-context-menu">{children}</div>
+}))
+
 const filePath = '/tmp/workspace/paper.pdf' as AbsoluteFilePath
 let initialDataTheme: string | null
 let themeBackground: string
@@ -313,8 +317,14 @@ describe('PdfFilePreview', () => {
         supportsPinchToZoom: true
       })
     )
-    expect(screen.getByTestId('pdfjs-viewer-container')).toHaveClass('absolute', 'inset-0', 'overflow-auto')
-    expect(screen.getByTestId('pdfjs-viewer')).toHaveClass('pdfViewer')
+    expect(screen.getByTestId('pdf-selection-context-menu')).toBeInTheDocument()
+    expect(screen.getByTestId('pdfjs-viewer-container')).toHaveClass(
+      'absolute',
+      'inset-0',
+      'select-text',
+      'overflow-auto'
+    )
+    expect(screen.getByTestId('pdfjs-viewer')).toHaveClass('pdfViewer', 'select-text')
     expect(mocks.pdfViewerScaleValues).toContain('page-width')
   })
 
