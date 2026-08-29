@@ -96,6 +96,26 @@ export class AssistantDataService {
     return application.get('DbService').getDb()
   }
 
+  /**
+   * Older builds allowed the general assistant UI to soft-delete a reading
+   * assistant. Reading books own those assistants, so restore any such rows
+   * before list/search projections are built.
+   */
+  private restoreReadingOwners(db: Pick<DbType, 'select' | 'update'> = this.db): void {
+    const deletedOwners = db
+      .select({ id: readingBookTable.assistantId })
+      .from(readingBookTable)
+      .innerJoin(assistantTable, eq(readingBookTable.assistantId, assistantTable.id))
+      .where(sql`${assistantTable.deletedAt} IS NOT NULL`)
+      .all()
+    for (const owner of deletedOwners) {
+      db.update(assistantTable)
+        .set({ deletedAt: null, updatedAt: Date.now() })
+        .where(and(eq(assistantTable.id, owner.id), sql`${assistantTable.deletedAt} IS NOT NULL`))
+        .run()
+    }
+  }
+
   private getModelNameById(db: Pick<DbType, 'select'>, modelId: string | null): string | null {
     if (!modelId) return null
     return modelService.getNamesByUniqueIdsTx(db, [modelId]).get(modelId) ?? null
@@ -254,6 +274,7 @@ export class AssistantDataService {
   }
 
   search(query: { q: string; limit: number; updatedAtFrom?: number }): AssistantEntitySearchItem[] {
+    this.restoreReadingOwners()
     const conditions: SQL[] = [isNull(assistantTable.deletedAt)]
     const searchClause = buildSearchPredicate(query.q)
     if (searchClause) conditions.push(searchClause)
@@ -299,6 +320,7 @@ export class AssistantDataService {
    * `page` and `limit` are filled by the schema default — no runtime fallback.
    */
   list(query: ListAssistantsQuery): { items: Assistant[]; total: number; page: number } {
+    this.restoreReadingOwners()
     const { page, limit } = query
     const offset = (page - 1) * limit
 

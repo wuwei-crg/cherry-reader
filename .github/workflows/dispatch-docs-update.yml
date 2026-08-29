@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   dispatch-docs-update:
+    if: github.repository == 'CherryHQ/cherry-studio'
     runs-on: ubuntu-latest
     steps:
       - name: Get Release Tag from Event

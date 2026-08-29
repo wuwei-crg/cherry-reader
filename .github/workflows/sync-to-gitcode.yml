@@ -22,6 +22,7 @@ permissions:
 
 jobs:
   build-windows-signed:
+    if: github.repository == 'CherryHQ/cherry-studio'
     runs-on: [self-hosted, windows-signing]
     outputs:
       tag: ${{ steps.get-tag.outputs.tag }}
@@ -148,6 +149,7 @@ jobs:
           retention-days: 1
 
   sync-to-gitcode:
+    if: github.repository == 'CherryHQ/cherry-studio'
     runs-on: [self-hosted, windows-signing]
     needs: build-windows-signed
     steps:
@@ -453,6 +455,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-windows-signed, sync-to-gitcode]
     if: >-
+      github.repository == 'CherryHQ/cherry-studio' &&
       always() &&
       (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true') &&
       (

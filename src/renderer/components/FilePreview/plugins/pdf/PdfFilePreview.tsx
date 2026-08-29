@@ -94,7 +94,7 @@ function detachDocument(viewer: PdfJsViewer): void {
     // pdf.js can throw while cancelling a canvas render during a rapid resize or unmount.
     // The viewer is already being disposed, so retain the error for diagnostics without
     // allowing its cleanup path to take down the surrounding conversation.
-    logger.warn('PDF viewer document detach failed during cleanup', error)
+    logger.warn('PDF viewer document detach failed during cleanup', error as Error)
   }
 }
 
@@ -505,7 +505,7 @@ export default function PdfFilePreview({ filePath, fileName, metadata, refreshKe
       try {
         pdfViewer.cleanup()
       } catch (error) {
-        logger.warn('PDF viewer cleanup failed', error)
+        logger.warn('PDF viewer cleanup failed', error as Error)
       }
       if (pdfViewerRef.current === pdfViewer) {
         pdfViewerRef.current = null

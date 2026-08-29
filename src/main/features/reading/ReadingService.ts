@@ -26,6 +26,12 @@ const READING_ASSISTANT_PROMPT =
 @ServicePhase(Phase.WhenReady)
 @DependsOn(['FileProcessingService'])
 export class ReadingService extends BaseService {
+  private stopping = false
+
+  protected override onStop(): void {
+    this.stopping = true
+  }
+
   protected onInit(): void {
     for (const book of readingBookService.list()) {
       if (book.status === 'processing' && book.parseJobId) void this.finishWhenSettled(book.id, book.parseJobId)
@@ -37,15 +43,29 @@ export class ReadingService extends BaseService {
     sourceName: string
     title: string
   }): Promise<{ bookId: string; assistantId: string }> {
+    // Keep a private copy so reading conversations remain usable after the
+    // user moves or deletes the original import.
+    const bookId = uuidv4()
+    const managedSourcePath = AbsoluteFilePathSchema.parse(
+      path.join(application.getPath('feature.reading.data'), `${bookId}.pdf`)
+    )
+    await fs.copyFile(input.sourcePath, managedSourcePath)
+
     const assistant = assistantDataService.create({
       name: input.title,
       description: input.sourceName,
       emoji: '📖',
       prompt: READING_ASSISTANT_PROMPT
     })
-    const book = application
-      .get('DbService')
-      .withWriteTx((tx) => readingBookService.createBookTx(tx, { assistantId: assistant.id, ...input }))
+    const book = application.get('DbService').withWriteTx((tx) =>
+      readingBookService.createBookTx(tx, {
+        id: bookId,
+        assistantId: assistant.id,
+        title: input.title,
+        sourceName: input.sourceName,
+        sourcePath: managedSourcePath
+      })
+    )
     const outputPath = AbsoluteFilePathSchema.parse(
       path.join(application.getPath('feature.reading.data'), `${book.id}.md`)
     )
@@ -53,7 +73,7 @@ export class ReadingService extends BaseService {
       const snapshot = await application.get('FileProcessingService').startJob({
         feature: 'document_to_markdown',
         processorId: 'mineru',
-        file: createFilePathHandle(AbsoluteFilePathSchema.parse(input.sourcePath)),
+        file: createFilePathHandle(managedSourcePath),
         output: { kind: 'path', path: outputPath, preserveMineruContentList: true },
         context: { dataId: uuidv4() }
       })
@@ -100,7 +120,8 @@ export class ReadingService extends BaseService {
     try {
       await Promise.all([
         fs.rm(markdownPath, { force: true }),
-        fs.rm(getMineruContentListPath(markdownPath), { force: true })
+        fs.rm(getMineruContentListPath(markdownPath), { force: true }),
+        fs.rm(this.getPdfPath(book.id), { force: true })
       ])
     } catch (error) {
       logger.warn('Failed to remove reading artifacts after deleting book', { bookId: book.id, error })
@@ -146,7 +167,7 @@ export class ReadingService extends BaseService {
   }
 
   private async finishWhenSettled(bookId: string, jobId: string): Promise<void> {
-    while (!this.isStopping) {
+    while (!this.stopping) {
       const snapshot = jobService.getById(jobId)
       if (!snapshot) {
         readingBookService.markFailed(bookId, 'Document parsing job was not found')
@@ -183,5 +204,9 @@ export class ReadingService extends BaseService {
 
   private getMarkdownPath(bookId: string) {
     return AbsoluteFilePathSchema.parse(path.join(application.getPath('feature.reading.data'), `${bookId}.md`))
+  }
+
+  private getPdfPath(bookId: string) {
+    return AbsoluteFilePathSchema.parse(path.join(application.getPath('feature.reading.data'), `${bookId}.pdf`))
   }
 }

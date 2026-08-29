@@ -123,8 +123,12 @@ export class ReadingBookService {
         topicId: readingTopicContextTable.topicId
       })
       .from(readingTopicContextTable)
-      .innerJoin(readingBookTable, eq(readingTopicContextTable.bookId, readingBookTable.id))
-      .where(eq(readingTopicContextTable.topicId, topicId))
+      // The assistant owns the book. The context only owns the selected range;
+      // resolving through the topic prevents a stale context.bookId from
+      // making an otherwise valid reading conversation appear to lose its book.
+      .innerJoin(topicTable, eq(readingTopicContextTable.topicId, topicTable.id))
+      .innerJoin(readingBookTable, eq(topicTable.assistantId, readingBookTable.assistantId))
+      .where(and(eq(readingTopicContextTable.topicId, topicId), isNull(topicTable.deletedAt)))
       .limit(1)
       .all()
     return row ? { ...row, sourcePath: AbsoluteFilePathSchema.parse(row.sourcePath) } : undefined
@@ -133,6 +137,16 @@ export class ReadingBookService {
   getSelectedChapters(topicId: string): ReadingChapter[] {
     const context = this.findTopicContext(topicId)
     if (!context) return []
+    const [book] = application
+      .get('DbService')
+      .getDb()
+      .select({ id: readingBookTable.id })
+      .from(topicTable)
+      .innerJoin(readingBookTable, eq(topicTable.assistantId, readingBookTable.assistantId))
+      .where(and(eq(topicTable.id, topicId), isNull(topicTable.deletedAt)))
+      .limit(1)
+      .all()
+    if (!book) return []
     return application
       .get('DbService')
       .getDb()
@@ -140,7 +154,7 @@ export class ReadingBookService {
       .from(readingChapterTable)
       .where(
         and(
-          eq(readingChapterTable.bookId, context.bookId),
+          eq(readingChapterTable.bookId, book.id),
           eq(readingChapterTable.revision, context.revision),
           gte(readingChapterTable.orderIndex, context.startOrderIndex),
           lte(readingChapterTable.orderIndex, context.endOrderIndex)
@@ -153,11 +167,12 @@ export class ReadingBookService {
 
   createBookTx(
     tx: DbOrTx,
-    input: { assistantId: string; title: string; sourceName: string; sourcePath: string }
+    input: { id?: string; assistantId: string; title: string; sourceName: string; sourcePath: string }
   ): ReadingBook {
+    const { id, ...bookInput } = input
     const [row] = tx
       .insert(readingBookTable)
-      .values({ ...input, status: 'pending' })
+      .values({ ...(id ? { id } : {}), ...bookInput, status: 'pending' })
       .returning()
       .all()
     return toBook(row)
@@ -240,7 +255,7 @@ export class ReadingBookService {
     notifyDataApiDataChange([
       { endpoint: '/reading-books', kind: 'projection', entityIds: [id] },
       { endpoint: '/reading-books/:id', entityIds: [id] },
-      { endpoint: '/reading-books/:id/chapters', entityIds: [id] }
+      { endpoint: '/reading-books/:id/chapters', kind: 'projection', entityIds: [id] }
     ])
   }
 }

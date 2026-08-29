@@ -1,12 +1,12 @@
 {
-  "name": "CherryStudio",
-  "version": "2.0.9",
+  "name": "cherry-reader",
+  "version": "2.0.10",
   "private": true,
-  "description": "A powerful AI assistant for producer.",
-  "desktopName": "CherryStudio.desktop",
+  "description": "An AI reading workspace for focused learning.",
+  "desktopName": "CherryReader.desktop",
   "main": "./out/main/main.js",
   "author": "support@cherry-ai.com",
-  "homepage": "https://github.com/CherryHQ/cherry-studio",
+  "homepage": "https://github.com/wuwei-crg/cherry-reader",
   "engines": {
     "node": ">=24.11.1 <24.16.0"
   },

@@ -123,9 +123,14 @@ export function mapProgress(fileResult: MineruExtractFileResult): number {
   const extractedPages = fileResult.extract_progress?.extracted_pages
   const totalPages = fileResult.extract_progress?.total_pages
 
-  if (!extractedPages || !totalPages) {
-    return 0
+  if (typeof extractedPages === 'number' && typeof totalPages === 'number' && totalPages > 0) {
+    return Math.min(99, Math.max(0, Math.round((extractedPages / totalPages) * 100)))
   }
 
-  return Math.min(99, Math.max(0, Math.round((extractedPages / totalPages) * 100)))
+  // MinerU does not expose page counters during the initial queue/upload
+  // states. Keep the progress indicator visibly active instead of presenting
+  // an indefinitely idle 0% while the remote task is advancing.
+  if (fileResult.state === 'waiting-file') return 5
+  if (fileResult.state === 'pending' || fileResult.state === 'running') return 10
+  return 0
 }

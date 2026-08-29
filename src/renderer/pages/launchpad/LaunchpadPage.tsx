@@ -46,6 +46,7 @@ const APP_ICON_SOURCES: Record<SidebarAppId, string> = {
   translate: translateIcon,
   mini_app: miniAppIcon,
   knowledge: knowledgeIcon,
+  reading: knowledgeIcon,
   files: filesIcon,
   code_tools: codeToolsIcon,
   notes: notesIcon

@@ -1,3 +1,4 @@
+import type { AbsoluteFilePath } from '@shared/types/file'
 import { cleanup, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -40,7 +41,12 @@ describe('ReadingConversationLayout', () => {
   it('keeps the whole source PDF beside the reading conversation', () => {
     render(
       <ReadingConversationLayout
-        source={{ bookId: 'book-1', title: 'Book', sourcePath: 'C:/books/book.pdf', topicId: 'topic-1' }}>
+        source={{
+          bookId: 'book-1',
+          title: 'Book',
+          sourcePath: 'C:/books/book.pdf' as AbsoluteFilePath,
+          topicId: 'topic-1'
+        }}>
         <div>Chat</div>
       </ReadingConversationLayout>
     )

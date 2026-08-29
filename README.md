@@ -29,12 +29,12 @@
 </div>
 
 <h1 align="center">
-  <a href="https://github.com/CherryHQ/cherry-studio/releases">
+  <a href="https://github.com/wuwei-crg/cherry-reader/releases">
     <img src="https://github.com/CherryHQ/cherry-studio/blob/main/build/icon.png?raw=true" width="150" height="150" alt="banner" /><br>
   </a>
 </h1>
 
-<p align="center">English | <a href="https://cherry-ai.com">Official Site</a> | <a href="https://docs.cherry-ai.com/docs/en-us">Documents</a> | <a href="./docs/contrib/development.md">Development</a> | <a href="https://github.com/CherryHQ/cherry-studio/issues">Feedback</a><br></p>
+<p align="center">English | <a href="./docs/contrib/development.md">Development</a> | <a href="https://github.com/wuwei-crg/cherry-reader/issues">Feedback</a><br></p>
 
 <div align="center">
 
@@ -61,9 +61,9 @@
  <a href="https://www.producthunt.com/posts/cherry-studio?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-cherry&#0045;studio" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=496640&theme=light" alt="Cherry&#0032;Studio - AI&#0032;Chatbots&#0044;&#0032;AI&#0032;Desktop&#0032;Client | Product Hunt" width="220" height="55" /></a>
 </div>
 
-# 🍒 Cherry Studio
+# 🍒 Cherry Reader
 
-Cherry Studio is a desktop client that supports multiple LLM providers, available on Windows, Mac and Linux.
+Cherry Reader is a desktop AI reading workspace built on Cherry Studio, with cloud MinerU document parsing and focused chapter-based conversations.
 
 👏 Join [Telegram Group](https://t.me/CherryStudioAI)｜[Discord](https://discord.gg/wez8HtpxqQ) | [QQ Group(575014769)](https://qm.qq.com/q/lo0D4qVZKi)
 
@@ -90,6 +90,7 @@ Cherry Studio is a desktop client that supports multiple LLM providers, availabl
 - 📚 300+ Pre-configured AI Assistants
 - 🤖 Custom Assistant Creation
 - 💬 Multi-model Simultaneous Conversations
+- 📖 Reading Assistant conversations with selectable book sections
 
 3. **Document & Data Processing**:
 
@@ -307,12 +308,12 @@ Should you require a commercial license that provides an exemption from the AGPL
 
 <!-- Links & Images -->
 
-[github-release-shield]: https://img.shields.io/github/v/release/CherryHQ/cherry-studio?logo=github
-[github-release-link]: https://github.com/CherryHQ/cherry-studio/releases
-[github-nightly-shield]: https://img.shields.io/github/actions/workflow/status/CherryHQ/cherry-studio/nightly-build.yml?label=nightly%20build&logo=github
-[github-nightly-link]: https://github.com/CherryHQ/cherry-studio/actions/workflows/nightly-build.yml
-[github-contributors-shield]: https://img.shields.io/github/contributors/CherryHQ/cherry-studio?logo=github
-[github-contributors-link]: https://github.com/CherryHQ/cherry-studio/graphs/contributors
+[github-release-shield]: https://img.shields.io/github/v/release/wuwei-crg/cherry-reader?logo=github
+[github-release-link]: https://github.com/wuwei-crg/cherry-reader/releases
+[github-nightly-shield]: https://img.shields.io/github/actions/workflow/status/wuwei-crg/cherry-reader/nightly-build.yml?label=nightly%20build&logo=github
+[github-nightly-link]: https://github.com/wuwei-crg/cherry-reader/actions/workflows/nightly-build.yml
+[github-contributors-shield]: https://img.shields.io/github/contributors/wuwei-crg/cherry-reader?logo=github
+[github-contributors-link]: https://github.com/wuwei-crg/cherry-reader/graphs/contributors
 
 <!-- Links & Images -->
 

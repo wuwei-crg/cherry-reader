@@ -49,6 +49,8 @@ describe('endpoint classification', () => {
       | '/prompts/:id/bindings'
       | '/providers'
       | '/providers/:providerId/models:resolve'
+      | '/reading-books'
+      | '/reading-books/:id/chapters'
       | '/skills'
       | '/tags'
       | '/tags/entities/:entityType/:entityId'

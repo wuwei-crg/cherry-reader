@@ -8,6 +8,7 @@ import { assistantTable } from '@data/db/schemas/assistant'
 import { chatMessageFileRefTable } from '@data/db/schemas/fileRelations'
 import { messageTable } from '@data/db/schemas/message'
 import { pinTable } from '@data/db/schemas/pin'
+import { readingTopicContextTable } from '@data/db/schemas/reading'
 import { topicTable } from '@data/db/schemas/topic'
 import type { DbOrTx } from '@data/db/types'
 import { loggerService } from '@logger'
@@ -327,9 +328,31 @@ export class TopicService {
         topicId: newTopicRow.id
       })
 
-      // Intentionally copies only topic metadata, root-to-node messages, and chat-message file refs.
+      // Copy topic metadata, root-to-node messages, and chat-message file refs.
       // Pins, tags, trace links, and pruned siblings/descendants stay with their original rows.
       copyChatMessageFileRefsBySourceIdMapTx(tx, copiedMessageIds)
+
+      // A reading conversation's chapter range is part of the conversation
+      // identity. Preserve it when duplicating the topic so the copy remains
+      // attached to the same book through its assistant.
+      const [readingContext] = tx
+        .select()
+        .from(readingTopicContextTable)
+        .where(eq(readingTopicContextTable.topicId, sourceTopicId))
+        .limit(1)
+        .all()
+      if (readingContext) {
+        tx.insert(readingTopicContextTable)
+          .values({
+            topicId: newTopicRow.id,
+            bookId: readingContext.bookId,
+            revision: readingContext.revision,
+            startOrderIndex: readingContext.startOrderIndex,
+            endOrderIndex: readingContext.endOrderIndex,
+            estimatedTokens: readingContext.estimatedTokens
+          })
+          .run()
+      }
 
       const [updatedTopicRow] = tx
         .update(topicTable)
@@ -358,7 +381,7 @@ export class TopicService {
 
     const topic = dbService.withWriteTx((tx) => {
       const [existing] = tx
-        .select({ id: topicTable.id })
+        .select({ id: topicTable.id, assistantId: topicTable.assistantId })
         .from(topicTable)
         .where(and(eq(topicTable.id, id), isNull(topicTable.deletedAt)))
         .limit(1)
@@ -375,6 +398,18 @@ export class TopicService {
         updates.isNameManuallyEdited = dto.isNameManuallyEdited
       }
       if (dto.assistantId !== undefined) {
+        const [readingContext] = tx
+          .select({ topicId: readingTopicContextTable.topicId })
+          .from(readingTopicContextTable)
+          .where(eq(readingTopicContextTable.topicId, id))
+          .limit(1)
+          .all()
+        if (readingContext && dto.assistantId !== existing.assistantId) {
+          throw DataApiErrorFactory.conflict(
+            'A reading conversation is bound to its book assistant and cannot be moved to another assistant.',
+            'topic'
+          )
+        }
         if (dto.assistantId !== null) {
           assertActiveAssistantTx(tx, dto.assistantId)
         }
@@ -397,7 +432,7 @@ export class TopicService {
   move(id: string, dto: MoveTopicDto): Topic {
     const topic = application.get('DbService').withWriteTx((tx) => {
       const [target] = tx
-        .select({ id: topicTable.id })
+        .select({ id: topicTable.id, assistantId: topicTable.assistantId })
         .from(topicTable)
         .where(and(eq(topicTable.id, id), isNull(topicTable.deletedAt)))
         .limit(1)
@@ -405,6 +440,19 @@ export class TopicService {
       if (!target) throw DataApiErrorFactory.notFound('Topic', id)
 
       assertActiveAssistantTx(tx, dto.assistantId)
+
+      const [readingContext] = tx
+        .select({ topicId: readingTopicContextTable.topicId })
+        .from(readingTopicContextTable)
+        .where(eq(readingTopicContextTable.topicId, id))
+        .limit(1)
+        .all()
+      if (readingContext && dto.assistantId !== target.assistantId) {
+        throw DataApiErrorFactory.conflict(
+          'A reading conversation is bound to its book assistant and cannot be moved to another assistant.',
+          'topic'
+        )
+      }
 
       if ('before' in dto.order || 'after' in dto.order) {
         const anchorId = 'before' in dto.order ? dto.order.before : dto.order.after

@@ -1,6 +1,6 @@
 import { Button, Checkbox, ConfirmDialog } from '@cherrystudio/ui'
 import EditNameDialog from '@renderer/components/EditNameDialog'
-import { useQuery } from '@renderer/data/hooks/useDataApi'
+import { useDataChange, useQuery } from '@renderer/data/hooks/useDataApi'
 import { useFiles } from '@renderer/hooks/useFiles'
 import { ipcApi } from '@renderer/ipc'
 import { type ChapterRange, toggleChapterRange } from '@renderer/pages/reading/chapterSelection'
@@ -9,9 +9,10 @@ import { toast } from '@renderer/services/toast'
 import { formatErrorMessageWithPrefix } from '@renderer/utils/error'
 import { cn } from '@renderer/utils/style'
 import type { ReadingBook, ReadingChapter } from '@shared/data/types/reading'
+import { AbsoluteFilePathSchema } from '@shared/types/file'
 import { useNavigate } from '@tanstack/react-router'
 import { BookOpen, FileUp, LoaderCircle, MessageCircle, PencilLine, RotateCcw, Trash2 } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 function getBookStatusKey(status: ReadingBook['status']): string {
@@ -23,12 +24,24 @@ export default function ReadingPage() {
   const navigate = useNavigate()
   const { onSelectFile, selecting } = useFiles({ extensions: ['pdf'] })
   const { data: books = [], refetch: refreshBooks } = useQuery('/reading-books')
+  useDataChange('/reading-books', () => void refreshBooks())
+
+  // Notifications are best-effort across windows. While a remote MinerU job is
+  // active, keep a small polling fallback so completion cannot leave this page
+  // stuck on its last cached progress value until the next app restart.
+  const hasProcessingBook = books.some((book) => book.status === 'processing' && book.parseJobId)
+  useEffect(() => {
+    if (!hasProcessingBook) return
+    const timer = window.setInterval(() => void refreshBooks(), 1_500)
+    return () => window.clearInterval(timer)
+  }, [hasProcessingBook, refreshBooks])
+
   const [selectedBookId, setSelectedBookId] = useState<string>()
   const selectedBook = useMemo(
     () => books.find((book) => book.id === selectedBookId) ?? books[0],
     [books, selectedBookId]
   )
-  const { data: chapters = [], refetch: refreshChapters } = useQuery('/reading-books/:id/chapters', {
+  const { data: chapters = [] } = useQuery('/reading-books/:id/chapters', {
     params: { id: selectedBook?.id ?? '' },
     enabled: Boolean(selectedBook?.id && selectedBook.status === 'ready')
   })
@@ -49,7 +62,11 @@ export default function ReadingPage() {
     const title = file.name.replace(/\.pdf$/i, '').trim() || file.name
     setIsImporting(true)
     try {
-      const result = await ipcApi.request('reading.import_pdf', { sourcePath: file.path, sourceName: file.name, title })
+      const result = await ipcApi.request('reading.import_pdf', {
+        sourcePath: AbsoluteFilePathSchema.parse(file.path),
+        sourceName: file.name,
+        title
+      })
       setSelectedBookId(result.bookId)
       setRange(undefined)
       await refreshBooks()
@@ -120,8 +137,8 @@ export default function ReadingPage() {
 
   return (
     <main className="flex min-h-0 flex-1 overflow-hidden bg-background">
-      <aside className="flex w-72 shrink-0 flex-col border-r border-border-subtle bg-background-subtle/30">
-        <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
+      <aside className="flex w-72 shrink-0 flex-col border-border-subtle border-r bg-background-subtle/30">
+        <div className="flex items-center justify-between gap-3 border-border-subtle border-b px-4 py-3">
           <h1 className="truncate font-medium text-foreground text-sm">{t('reading.title')}</h1>
           <Button
             size="icon"
@@ -211,7 +228,7 @@ export default function ReadingPage() {
           </div>
         ) : (
           <>
-            <header className="flex shrink-0 items-center justify-between gap-4 border-b border-border-subtle px-6 py-3">
+            <header className="flex shrink-0 items-center justify-between gap-4 border-border-subtle border-b px-6 py-3">
               <div className="min-w-0">
                 <h2 className="truncate font-medium text-foreground text-sm">{selectedBook.title}</h2>
                 <p className="text-muted-foreground text-xs">{t('reading.select_sections')}</p>
@@ -265,7 +282,7 @@ export default function ReadingPage() {
               </div>
             </div>
             {selectedChapters.length > 0 && (
-              <footer className="shrink-0 border-t border-border-subtle px-6 py-2 text-muted-foreground text-xs">
+              <footer className="shrink-0 border-border-subtle border-t px-6 py-2 text-muted-foreground text-xs">
                 {selectedChapters[0].title} - {selectedChapters.at(-1)?.title}
               </footer>
             )}
