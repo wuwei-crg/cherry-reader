@@ -30,6 +30,7 @@ Release steps:
 6. Wait for all platform jobs to finish and verify the GitHub Release assets.
 
 The workflow checks out the exact tag and rejects a release when its version
-does not match `package.json`. If a tag push does not create a run, manually
-dispatch `Release` with that existing tag; do not create another tag or use a
-different commit.
+does not match `package.json`. It currently builds and publishes Windows
+artifacts only. If a tag push does not create a run, manually dispatch
+`Release` with that existing tag; do not create another tag or use a different
+commit.

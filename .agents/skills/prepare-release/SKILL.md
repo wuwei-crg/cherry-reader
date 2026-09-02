@@ -50,7 +50,7 @@ git push origin "v{version}"
 
 The tag must point at the pushed release commit, and `package.json` must match
 the tag version. `.github/workflows/release.yml` validates both before any
-build starts, then checks out that exact tag for macOS, Windows, and Linux.
+build starts, then checks out that exact tag and builds Windows artifacts.
 
 Confirm that the workflow actually started before reporting completion:
 
@@ -64,7 +64,7 @@ If no run appears after the tag push, trigger the same workflow manually with
 the existing tag and wait for it to finish:
 
 ```bash
-gh workflow run Release --ref main -f tag="v{version}" -f platform=all
+gh workflow run Release --ref main -f tag="v{version}" -f platform=windows
 ```
 
 Never create a second tag or a release from a different commit to work around
