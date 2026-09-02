@@ -26,4 +26,10 @@ Release steps:
 2. Commit the version change on the current branch.
 3. Push the branch commit to `origin`.
 4. Create and push the matching `vX.Y.Z` tag.
-5. Let `.github/workflows/release.yml` build and publish the artifacts.
+5. Confirm the `Release` workflow appears in GitHub Actions.
+6. Wait for all platform jobs to finish and verify the GitHub Release assets.
+
+The workflow checks out the exact tag and rejects a release when its version
+does not match `package.json`. If a tag push does not create a run, manually
+dispatch `Release` with that existing tag; do not create another tag or use a
+different commit.

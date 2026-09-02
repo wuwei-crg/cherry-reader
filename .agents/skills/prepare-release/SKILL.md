@@ -37,7 +37,8 @@ Leave `release-history.json` unchanged for prereleases. Run
 
 ## Publish
 
-Run the relevant checks before publishing, then commit and push directly:
+Run the relevant checks before publishing, then commit and push directly. Do
+not run `pnpm build:win` locally as a substitute for the release workflow:
 
 ```bash
 git add package.json electron-builder.yml resources/cherry-studio/release-history.json resources/builtin-agents/cherry-assistant/product-manifest.json
@@ -47,8 +48,27 @@ git tag -a "v{version}" -m "Cherry Reader v{version}"
 git push origin "v{version}"
 ```
 
-The tag push triggers `.github/workflows/release.yml`, which builds the desktop
-artifacts for macOS, Windows, and Linux and publishes the release assets.
+The tag must point at the pushed release commit, and `package.json` must match
+the tag version. `.github/workflows/release.yml` validates both before any
+build starts, then checks out that exact tag for macOS, Windows, and Linux.
+
+Confirm that the workflow actually started before reporting completion:
+
+```bash
+gh run list --workflow Release --limit 1
+gh run watch <run-id> --interval 15
+gh release view "v{version}"
+```
+
+If no run appears after the tag push, trigger the same workflow manually with
+the existing tag and wait for it to finish:
+
+```bash
+gh workflow run Release --ref main -f tag="v{version}" -f platform=all
+```
+
+Never create a second tag or a release from a different commit to work around
+a missing run.
 
 Generated files must be refreshed by their generator, and local app data must
 remain outside the repository working tree.
