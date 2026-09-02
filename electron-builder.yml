@@ -171,28 +171,14 @@ artifactBuildCompleted: scripts/artifact-build-completed.js
 releaseInfo:
   releaseNotes: |
     <!--LANG:en-->
-    Cherry Reader 2.0.10 - Reading Assistant and PDF Improvements
+    Cherry Reader 2.0.11 - Translate Selected Text in Reading Assistant PDFs
 
     ✨ New Features
-    - [Reading] Import PDFs, parse them with MinerU, choose a contiguous range of sections, and start focused AI conversations with a reading assistant.
-    - [PDF] Select and copy text directly in PDF previews.
-
-    🐛 Bug Fixes
-    - [Reading] Keep reading conversations linked to their book assistant and preserve selected chapter context when reopening or copying a conversation.
-    - [Reading] Keep imported books available after the original PDF is moved or deleted, restore linked assistants, and clean up book files on deletion.
-    - [Reading] Refresh parsing status automatically and show active progress while MinerU queues and processes a document.
-    - [PDF] Improve preview lifecycle handling to reduce blank documents and failed renders.
+    - [Reading] Select text in the reading assistant PDF viewer and use the context menu to open Cherry Reader's translation assistant.
 
     <!--LANG:zh-CN-->
-    Cherry Reader 2.0.10 - 阅读助手与 PDF 体验改进
+    Cherry Reader 2.0.11 - 阅读助手 PDF 选中文字翻译
 
     ✨ 新功能
-    - [阅读助手] 支持导入 PDF，使用 MinerU 解析，连续选择目录范围，并围绕选定内容开启专属 AI 对话。
-    - [PDF] PDF 预览支持直接选择和复制文字。
-
-    🐛 问题修复
-    - [阅读助手] 阅读对话重新进入或复制后仍会绑定原书籍助手，并保留选定章节上下文。
-    - [阅读助手] 原始 PDF 被移动或删除后，已导入书籍仍可用；删除书籍时会清理关联文件。
-    - [阅读助手] 解析状态会自动刷新，MinerU 排队和处理期间会显示持续的活动进度。
-    - [PDF] 改进预览生命周期处理，减少文档空白和渲染失败。
+    - [阅读助手] 在 PDF 阅读区选中文字后，可通过右键菜单打开 Cherry Reader 翻译助手。
     <!--LANG:END-->

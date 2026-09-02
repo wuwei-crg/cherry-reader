@@ -1,6 +1,6 @@
 {
   "name": "cherry-reader",
-  "version": "2.0.10",
+  "version": "2.0.11",
   "private": true,
   "description": "An AI reading workspace for focused learning.",
   "desktopName": "CherryReader.desktop",
