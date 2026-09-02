@@ -3,7 +3,7 @@ import katex from 'katex'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import SelectionContextMenu from '../SelectionContextMenu'
+import SelectionContextMenu, { SelectionContextMenuActionsProvider } from '../SelectionContextMenu'
 
 type ExtraItem = {
   id: string
@@ -25,6 +25,7 @@ vi.mock('react-i18next', () => ({
     t: (key: string) => {
       if (key === 'common.copy') return 'Copy'
       if (key === 'chat.message.quote') return 'Quote'
+      if (key === 'selection.action.builtin.translate') return 'Translate'
       return key
     }
   })
@@ -172,6 +173,25 @@ describe('SelectionContextMenu', () => {
 
     expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Quote' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Translate' })).not.toBeInTheDocument()
+  })
+
+  it('shows translation only inside an opted-in selection context', () => {
+    mockSelection('selected text')
+    const onTranslate = vi.fn()
+
+    render(
+      <SelectionContextMenuActionsProvider onTranslate={onTranslate}>
+        <SelectionContextMenu>
+          <div data-testid="target">message</div>
+        </SelectionContextMenu>
+      </SelectionContextMenuActionsProvider>
+    )
+
+    fireEvent.contextMenu(screen.getByTestId('target'))
+    fireEvent.click(screen.getByRole('button', { name: 'Translate' }))
+
+    expect(onTranslate).toHaveBeenCalledWith('selected text')
   })
 
   it('preserves indentation when selected code includes line numbers', () => {

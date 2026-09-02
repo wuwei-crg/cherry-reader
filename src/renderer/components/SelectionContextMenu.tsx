@@ -1,7 +1,7 @@
 import { loggerService } from '@logger'
 import { CommandContextMenu, type CommandContextMenuExtraItem } from '@renderer/components/command'
 import { toast } from '@renderer/services/toast'
-import { useCallback, useMemo, useState } from 'react'
+import { createContext, use, useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const logger = loggerService.withContext('SelectionContextMenu')
@@ -10,6 +10,20 @@ const TEXT_BLOCK_TAGS = new Set(['BLOCKQUOTE', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H
 
 interface SelectionContextMenuProps {
   children: React.ReactNode
+}
+
+interface SelectionContextMenuActions {
+  onTranslate?: (text: string) => void
+}
+
+const SelectionContextMenuActionsContext = createContext<SelectionContextMenuActions>({})
+
+export function SelectionContextMenuActionsProvider({
+  children,
+  onTranslate
+}: SelectionContextMenuActions & { children: React.ReactNode }) {
+  const value = useMemo(() => ({ onTranslate }), [onTranslate])
+  return <SelectionContextMenuActionsContext value={value}>{children}</SelectionContextMenuActionsContext>
 }
 
 /**
@@ -77,11 +91,13 @@ function extractSelectedText(selection: Selection): string {
 }
 
 /**
- * Right-click menu for selected text regions: copy the current selection or quote it
- * back to the main window. No selection means no selection-specific actions.
+ * Right-click menu for selected text regions. Copy and quote are always available;
+ * scoped actions such as translation can be added by a provider. No selection means
+ * no selection-specific actions.
  */
 const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({ children }) => {
   const { t } = useTranslation()
+  const { onTranslate } = use(SelectionContextMenuActionsContext)
   const [selectedText, setSelectedText] = useState('')
 
   const getSelectedText = useCallback((): string => {
@@ -121,7 +137,16 @@ const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({ children })
     (text: string): CommandContextMenuExtraItem[] => {
       if (text.length === 0) return []
 
-      return [
+      const items: CommandContextMenuExtraItem[] = []
+      if (onTranslate) {
+        items.push({
+          type: 'item',
+          id: 'selection.translate',
+          label: t('selection.action.builtin.translate'),
+          onSelect: () => onTranslate(text)
+        })
+      }
+      items.push(
         {
           type: 'item',
           id: 'selection.copy',
@@ -134,9 +159,10 @@ const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({ children })
           label: t('chat.message.quote'),
           onSelect: () => handleQuote(text)
         }
-      ]
+      )
+      return items
     },
-    [handleCopy, handleQuote, t]
+    [handleCopy, handleQuote, onTranslate, t]
   )
 
   const extraItems = useMemo(() => getMenuItems(selectedText), [getMenuItems, selectedText])
