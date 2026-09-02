@@ -1,79 +1,29 @@
 ---
-description: Branch model for contributions, pull request guidelines, and version tag management targeting main
+description: Direct commit, push, and version tag workflow for the Cherry Reader fork
 ---
 
-# 🌿 Branching Strategy
+# Branching Strategy
 
-Cherry Studio implements a structured branching strategy to maintain code quality and streamline the development process.
+Cherry Reader uses a direct commit and tag workflow for this private fork.
 
-> **Current model.** `main` is the default branch for all active development — submit features, refactors, optimizations, and fixes here.
+## Main Branch
 
-## Main Branches
+`main` contains the latest development code. Changes are committed and pushed
+directly from the current working branch.
 
-- `main`: Main development branch
+## Release Tags
 
-  - Contains the latest development code
-  - Direct commits are not allowed - changes must come through pull requests
-  - Code may contain features in development and might not be fully stable
+Version tags trigger the desktop release workflow:
 
-- `release/*`: Release branches
-  - Created from `main` branch
-  - Contains stable code ready for release
-  - Only accepts documentation updates and bug fixes
-  - Thoroughly tested before production deployment
+- Major releases: `v1.0.0`, `v2.0.0`
+- Feature releases: `v1.1.0`, `v1.2.0`
+- Patch releases: `v1.0.1`, `v1.0.2`
+- Hotfix releases: `v1.0.1-hotfix`
 
-For details about the `testplan` branch used in the Test Plan, please refer to the [Test Plan](./test-plan.md).
+Release steps:
 
-## Contributing Branches
-
-When contributing to Cherry Studio, please follow these guidelines:
-
-1. **Feature Branches:**
-
-   - Create from `main` branch
-   - Naming format: `feature/issue-number-brief-description`
-   - Submit PR back to `main`
-
-2. **Bug Fix Branches:**
-
-   - Create from `main` branch
-   - Naming format: `fix/issue-number-brief-description`
-   - Submit PR back to `main`
-
-3. **Documentation Branches:**
-
-   - Create from `main` branch
-   - Naming format: `docs/brief-description`
-   - Submit PR back to `main`
-
-4. **Hotfix Branches:**
-
-   - Create from `main` branch
-   - Naming format: `hotfix/issue-number-brief-description`
-   - Submit PR back to `main`
-
-5. **Release Branches:**
-   - Create from `main` branch
-   - Naming format: `release/version-number`
-   - Used for final preparation work before version release
-   - Only accepts bug fixes and documentation updates
-   - After testing and preparation, merge back to `main` and tag with version
-
-## Workflow Diagram
-
-![](https://github.com/user-attachments/assets/61db64a2-fab1-4a16-8253-0c64c9df1a63)
-
-## Pull Request Guidelines
-
-- Active development (features, refactors, optimizations, and fixes) goes to `main`
-- Ensure your branch is up to date with the latest `main` changes before submitting
-- Include relevant issue numbers in your PR description
-- Make sure all tests pass and code meets our quality standards
-- Add before/after screenshots if you add a new feature or modify a UI component
-
-## Version Tag Management
-
-- Major releases: v1.0.0, v2.0.0, etc.
-- Feature releases: v1.1.0, v1.2.0, etc.
-- Patch releases: v1.0.1, v1.0.2, etc.
-- Hotfix releases: v1.0.1-hotfix, etc.
+1. Update release metadata and generated artifacts.
+2. Commit the version change on the current branch.
+3. Push the branch commit to `origin`.
+4. Create and push the matching `vX.Y.Z` tag.
+5. Let `.github/workflows/release.yml` build and publish the artifacts.
