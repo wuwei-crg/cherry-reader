@@ -171,14 +171,14 @@ artifactBuildCompleted: scripts/artifact-build-completed.js
 releaseInfo:
   releaseNotes: |
     <!--LANG:en-->
-    Cherry Reader 2.0.11 - Translate Selected Text in Reading Assistant PDFs
+    Cherry Reader 2.0.12 - Native EPUB Imports for Reading Assistant
 
     ✨ New Features
-    - [Reading] Select text in the reading assistant PDF viewer and use the context menu to open Cherry Reader's translation assistant.
+    - [Reading] Import EPUB books directly into Reading Assistant with local chapter and table-of-contents extraction, independent of MinerU page limits.
 
     <!--LANG:zh-CN-->
-    Cherry Reader 2.0.11 - 阅读助手 PDF 选中文字翻译
+    Cherry Reader 2.0.12 - 阅读助手原生 EPUB 导入
 
     ✨ 新功能
-    - [阅读助手] 在 PDF 阅读区选中文字后，可通过右键菜单打开 Cherry Reader 翻译助手。
+    - [阅读助手] 支持直接导入 EPUB 图书，在本地提取章节与目录，不受 MinerU 页数限制影响。
     <!--LANG:END-->
