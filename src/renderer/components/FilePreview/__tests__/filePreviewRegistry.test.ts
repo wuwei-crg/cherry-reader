@@ -96,6 +96,10 @@ describe('file preview registry', () => {
     expect(resolveExtensionPlugin(`/tmp/report.${extension}`, filePreviewRegistry)?.id).toBe('pdf')
   })
 
+  it('registers the EPUB plugin', () => {
+    expect(resolveExtensionPlugin('/tmp/book.epub', filePreviewRegistry)?.id).toBe('epub')
+  })
+
   it('registers the Word plugin', () => {
     const extension = 'docx'
     expect(resolveExtensionPlugin(`/tmp/report.${extension}`, filePreviewRegistry)?.id).toBe('word')

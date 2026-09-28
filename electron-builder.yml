@@ -171,14 +171,16 @@ artifactBuildCompleted: scripts/artifact-build-completed.js
 releaseInfo:
   releaseNotes: |
     <!--LANG:en-->
-    Cherry Reader 2.0.12 - Native EPUB Imports for Reading Assistant
+    Cherry Reader 2.0.13 - Native EPUB Reader for Reading Assistant
 
     ✨ New Features
+    - [Reading] Open imported EPUB books in the conversation-side reading panel with chapter navigation, pagination, font-size controls, themes, and restored reading position.
     - [Reading] Import EPUB books directly into Reading Assistant with local chapter and table-of-contents extraction, independent of MinerU page limits.
 
     <!--LANG:zh-CN-->
-    Cherry Reader 2.0.12 - 阅读助手原生 EPUB 导入
+    Cherry Reader 2.0.13 - 阅读助手原生 EPUB 阅读器
 
     ✨ 新功能
+    - [阅读助手] 对话页左侧支持打开 EPUB 阅读器，提供目录、分页、字号、主题和阅读位置恢复。
     - [阅读助手] 支持直接导入 EPUB 图书，在本地提取章节与目录，不受 MinerU 页数限制影响。
     <!--LANG:END-->

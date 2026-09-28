@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "package": {
     "name": "cherry-reader",
-    "version": "2.0.12",
+    "version": "2.0.13",
     "description": "An AI reading workspace for focused learning.",
     "homepage": "https://github.com/wuwei-crg/cherry-reader"
   },

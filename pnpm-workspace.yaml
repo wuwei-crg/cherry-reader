@@ -109,6 +109,7 @@ allowBuilds:
   core-js: true
   electron: true
   electron-winstaller: true
+  es5-ext: true
   esbuild: true
   koffi: true
   msw: true

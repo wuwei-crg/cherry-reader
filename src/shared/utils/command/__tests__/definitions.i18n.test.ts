@@ -7,7 +7,7 @@ describe('COMMAND_DEFINITIONS i18n', () => {
   it.each(COMMAND_DEFINITIONS.map((c) => [c.id, c.titleKey] as const))(
     '%s titleKey resolves to a real string in en-us.json',
     (_id, titleKey) => {
-      expect(typeof (enUs as Record<string, unknown>)[titleKey]).toBe('string')
+      expect(typeof (enUs as unknown as Record<string, unknown>)[titleKey]).toBe('string')
     }
   )
 })
