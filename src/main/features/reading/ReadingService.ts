@@ -16,6 +16,7 @@ import { estimateTokenCount } from 'tokenx'
 import { v4 as uuidv4 } from 'uuid'
 
 import { extractReadingChapters } from './chapterExtraction'
+import { extractEpubReadingChapters } from './epubExtraction'
 
 const logger = loggerService.withContext('ReadingService')
 const MAX_SELECTED_CONTEXT_TOKENS = 100_000
@@ -38,7 +39,7 @@ export class ReadingService extends BaseService {
     }
   }
 
-  async importPdf(input: {
+  async importBook(input: {
     sourcePath: string
     sourceName: string
     title: string
@@ -46,8 +47,10 @@ export class ReadingService extends BaseService {
     // Keep a private copy so reading conversations remain usable after the
     // user moves or deletes the original import.
     const bookId = uuidv4()
+    const extension = path.extname(input.sourcePath).toLowerCase()
+    if (extension !== '.pdf' && extension !== '.epub') throw new Error('Reading Assistant supports PDF and EPUB files')
     const managedSourcePath = AbsoluteFilePathSchema.parse(
-      path.join(application.getPath('feature.reading.data'), `${bookId}.pdf`)
+      path.join(application.getPath('feature.reading.data'), `${bookId}${extension}`)
     )
     await fs.copyFile(input.sourcePath, managedSourcePath)
 
@@ -66,10 +69,14 @@ export class ReadingService extends BaseService {
         sourcePath: managedSourcePath
       })
     )
-    const outputPath = AbsoluteFilePathSchema.parse(
-      path.join(application.getPath('feature.reading.data'), `${book.id}.md`)
-    )
     try {
+      if (extension === '.epub') {
+        const chapters = await extractEpubReadingChapters(managedSourcePath)
+        readingBookService.completeParse(book.id, chapters)
+        return { bookId: book.id, assistantId: assistant.id }
+      }
+
+      const outputPath = this.getMarkdownPath(book.id)
       const snapshot = await application.get('FileProcessingService').startJob({
         feature: 'document_to_markdown',
         processorId: 'mineru',
@@ -100,6 +107,7 @@ export class ReadingService extends BaseService {
 
   async deleteBook(input: { bookId: string }): Promise<void> {
     const current = readingBookService.getById(input.bookId)
+    const sourcePath = readingBookService.getSourcePath(input.bookId)
     if (current.status === 'processing' && current.parseJobId) {
       await application.get('JobManager').cancel(current.parseJobId, 'Reading book deleted')
     }
@@ -121,7 +129,7 @@ export class ReadingService extends BaseService {
       await Promise.all([
         fs.rm(markdownPath, { force: true }),
         fs.rm(getMineruContentListPath(markdownPath), { force: true }),
-        fs.rm(this.getPdfPath(book.id), { force: true })
+        fs.rm(sourcePath, { force: true })
       ])
     } catch (error) {
       logger.warn('Failed to remove reading artifacts after deleting book', { bookId: book.id, error })
@@ -204,9 +212,5 @@ export class ReadingService extends BaseService {
 
   private getMarkdownPath(bookId: string) {
     return AbsoluteFilePathSchema.parse(path.join(application.getPath('feature.reading.data'), `${bookId}.md`))
-  }
-
-  private getPdfPath(bookId: string) {
-    return AbsoluteFilePathSchema.parse(path.join(application.getPath('feature.reading.data'), `${bookId}.pdf`))
   }
 }

@@ -4,7 +4,7 @@ import type { readingRequestSchemas } from '@shared/ipc/schemas/reading'
 import type { IpcHandlersFor } from '@shared/ipc/types'
 
 export const readingHandlers: IpcHandlersFor<typeof readingRequestSchemas> = {
-  'reading.import_pdf': async (input) => application.get('ReadingService').importPdf(input),
+  'reading.import_book': async (input) => application.get('ReadingService').importBook(input),
   'reading.create_topic': async (input) => application.get('ReadingService').createTopic(input),
   'reading.rename_book': async (input) => application.get('ReadingService').renameBook(input),
   'reading.delete_book': async (input) => {

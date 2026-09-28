@@ -22,7 +22,7 @@ function getBookStatusKey(status: ReadingBook['status']): string {
 export default function ReadingPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { onSelectFile, selecting } = useFiles({ extensions: ['pdf'] })
+  const { onSelectFile, selecting } = useFiles({ extensions: ['pdf', 'epub'] })
   const { data: books = [], refetch: refreshBooks } = useQuery('/reading-books')
   useDataChange('/reading-books', () => void refreshBooks())
 
@@ -59,10 +59,10 @@ export default function ReadingPage() {
   const importBook = useCallback(async () => {
     const [file] = await onSelectFile({ multipleSelections: false })
     if (!file?.path) return
-    const title = file.name.replace(/\.pdf$/i, '').trim() || file.name
+    const title = file.name.replace(/\.(?:pdf|epub)$/i, '').trim() || file.name
     setIsImporting(true)
     try {
-      const result = await ipcApi.request('reading.import_pdf', {
+      const result = await ipcApi.request('reading.import_book', {
         sourcePath: AbsoluteFilePathSchema.parse(file.path),
         sourceName: file.name,
         title

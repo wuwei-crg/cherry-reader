@@ -5,7 +5,7 @@ import * as z from 'zod'
 import { defineRoute } from '../define'
 
 export const readingRequestSchemas = {
-  'reading.import_pdf': defineRoute({
+  'reading.import_book': defineRoute({
     input: z.strictObject({
       sourcePath: AbsoluteFilePathSchema,
       sourceName: z.string().trim().min(1),
