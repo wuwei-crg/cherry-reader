@@ -194,6 +194,15 @@ export default function EpubFilePreview({ filePath, fileName, metadata, refreshK
           spread: 'none',
           allowScriptedContent: false
         })
+        // epub.js advances its queue with requestAnimationFrame, which can be paused while a tab is hidden.
+        const renditionQueue = (
+          rendition as unknown as {
+            q?: { tick: (callback: FrameRequestCallback) => number }
+          }
+        ).q
+        if (renditionQueue) {
+          renditionQueue.tick = (callback) => window.setTimeout(() => callback(performance.now()), 0)
+        }
         rendition.themes.register('light', {
           body: { background: '#ffffff !important', color: '#202124 !important', padding: '0 4% !important' },
           'a:link': { color: '#2563eb !important' }
@@ -264,9 +273,17 @@ export default function EpubFilePreview({ filePath, fileName, metadata, refreshK
     renditionRef.current?.themes.fontSize(`${fontSize}%`)
   }, [fontSize])
 
-  const displayHref = useCallback((href: string) => {
-    void renditionRef.current?.display(href)
-    setTocOpen(false)
+  const displayHref = useCallback(async (href: string) => {
+    const rendition = renditionRef.current
+    if (!rendition) return
+
+    try {
+      await displayRendition(rendition, href)
+      setTocOpen(false)
+    } catch (error) {
+      const normalized = error instanceof Error ? error : new Error(String(error))
+      logger.error(`Failed to navigate EPUB contents to ${href}`, normalized)
+    }
   }, [])
 
   const canNavigate = status === 'ready'
@@ -298,7 +315,7 @@ export default function EpubFilePreview({ filePath, fileName, metadata, refreshK
                   className="block w-full truncate rounded px-2 py-1.5 text-left text-foreground text-sm hover:bg-accent"
                   style={{ paddingLeft: `${item.depth * 14 + 8}px` }}
                   title={item.label}
-                  onClick={() => displayHref(item.href)}>
+                  onClick={() => void displayHref(item.href)}>
                   {item.label}
                 </button>
               ))}

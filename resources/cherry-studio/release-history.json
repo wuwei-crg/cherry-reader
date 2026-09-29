@@ -1,5 +1,9 @@
 [
   {
+    "version": "2.0.14",
+    "releaseNotes": "<!--LANG:en-->\nCherry Reader 2.0.14 - EPUB Reader Rendering Fixes\n\n🐛 Bug Fixes\n- [Reading] Fix imported EPUB books showing a blank reading area when the window is hidden or restored.\n- [Reading] Fix EPUB table-of-contents navigation and preserve embedded image rendering in the reader.\n\n<!--LANG:zh-CN-->\nCherry Reader 2.0.14 - EPUB 阅读器渲染修复\n\n🐛 问题修复\n- [阅读助手] 修复窗口隐藏或恢复后导入的 EPUB 阅读区显示空白的问题。\n- [阅读助手] 修复 EPUB 目录跳转，并确保阅读器内嵌图片正常渲染。\n<!--LANG:END-->"
+  },
+  {
     "version": "2.0.13",
     "releaseNotes": "<!--LANG:en-->\nCherry Reader 2.0.13 - Native EPUB Reader for Reading Assistant\n\n✨ New Features\n- [Reading] Open imported EPUB books in the conversation-side reading panel with chapter navigation, pagination, font-size controls, themes, and restored reading position.\n- [Reading] Import EPUB books directly into Reading Assistant with local chapter and table-of-contents extraction, independent of MinerU page limits.\n\n<!--LANG:zh-CN-->\nCherry Reader 2.0.13 - 阅读助手原生 EPUB 阅读器\n\n✨ 新功能\n- [阅读助手] 对话页左侧支持打开 EPUB 阅读器，提供目录、分页、字号、主题和阅读位置恢复。\n- [阅读助手] 支持直接导入 EPUB 图书，在本地提取章节与目录，不受 MinerU 页数限制影响。\n<!--LANG:END-->"
   },
